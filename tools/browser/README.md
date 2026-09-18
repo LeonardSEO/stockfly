@@ -1,0 +1,24 @@
+# Browser soma metadata
+
+After compiling the graph and geometry, export the source annotations into a separate derived directory:
+
+```sh
+.venv/bin/python tools/browser/export_metadata.py
+```
+
+`apps/web/public/vendor/brain` links to `data/browser`; Vite includes that directory in its production output. The exporter only reads `data/raw` and `data/compiled`. It preserves the exact compiled neuron ordering and graph hash. IDs are read directly from `neurons.bin` as uint64 strings in the browser, without a JavaScript Number round trip. Annotation columns are type, class, superclass, and somaNeuromere. A superclass is not an anatomical region. An absent neuromere is explicitly unannotated.
+
+LOD0 is the existing real soma point cloud, not skeletons or inferred positions. Neurons without recorded soma geometry still participate in the full simulation. The visible, rendered and simulated counts are separate in the interface.
+
+Live inference pauses at actual CPU/GPU state boundaries and transfers at most 25 quantized frames per second (up to 16 samples per inference). Frame `tMs` is simulation time; `elapsedMs` measures wall time including sampling/pacing. Quantization maps dimensionless rates 0–20 to uint8; exact top-neuron values and final decision readouts remain full precision. `frameMode: "full"` opts into full-rate frames. GPU runtime failure restarts the position on CPU; backend and restarted step counters identify that change. Frame `regionRates` contains exact full-population averages by source somaNeuromere (including neurons without recorded geometry); unannotated cells stay explicit. If metadata is unavailable, region summaries are empty and the brain panel reports the metadata error. No activity is interpolated or fabricated.
+
+The main thread paints the final sample before applying a move. Worker requests mutate one engine serially; generation and trace IDs invalidate outdated frames, decisions and errors after new game/side change. Ordinary game reset preserves the loaded checkpoint.
+
+Focused checks:
+
+```sh
+node --experimental-strip-types --test apps/web/src/brain/activation.test.ts apps/web/src/chess/board.test.ts
+npx tsc --noEmit --target ES2022 --module ESNext --moduleResolution bundler --lib ES2022,DOM --skipLibCheck apps/web/src/main.ts apps/web/src/engine/stockfly.worker.ts
+```
+
+Build WASM first after changing the binding; then `npm run build --workspace apps/web`. The application reports missing geometry separately from engine load failures. A checkpoint 404 explicitly loads the untrained baseline; other checkpoint errors stop model loading.

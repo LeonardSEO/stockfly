@@ -1,3 +1,4 @@
+import type { ActivationFrame } from "../brain/activation";
 export interface ModelManifestInfo {
   neuronCount: number;
   edgeCount: number;
@@ -9,16 +10,18 @@ export interface ModelManifestInfo {
 }
 
 export type StockFlyRequest =
-  | { type: "load" }
-  | { type: "position"; fen: string; traceId: string; settleSteps?: number }
-  | { type: "reset" };
+  | { type: "load"; generation: number }
+  | { type: "position"; fen: string; traceId: string; generation: number; settleSteps?: number; frameMode?: "quantized" | "full" }
+  | { type: "reset"; generation: number };
 
 export type StockFlyResponse =
-  | { type: "loaded"; manifest: ModelManifestInfo }
-  | { type: "error"; message: string }
+  | { type: "loaded"; generation: number; manifest: ModelManifestInfo }
+  | { type: "error"; generation: number; traceId?: string; message: string }
+  | { type: "frame"; generation: number; traceId: string; frame: ActivationFrame }
   | {
       type: "decision";
       traceId: string;
+      generation: number;
       selectedMove: string;
       fromRates: number[];
       toRates: number[];

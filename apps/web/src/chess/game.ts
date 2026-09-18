@@ -1,4 +1,4 @@
-import { Chess } from "chess.js";
+import { Chess, type Square } from "chess.js";
 
 export class Game {
   private chess = new Chess();
@@ -20,7 +20,22 @@ export class Game {
   }
 
   legalMovesFrom(square: string): string[] {
-    return this.chess.moves({ square: square as any, verbose: true }).map((m: any) => m.to);
+    return this.chess.moves({ square: square as Square, verbose: true }).map((m) => m.to);
+  }
+
+  promotions(from: string, to: string): string[] {
+    return this.chess.moves({ square: from as Square, verbose: true })
+      .filter(move => move.to === to && move.promotion)
+      .map(move => move.promotion!);
+  }
+
+  history(): string[] { return this.chess.history(); }
+
+  result(): string | null {
+    if (this.chess.isCheckmate()) return `${this.turn() === "w" ? "Black" : "White"} wins by checkmate.`;
+    if (this.chess.isStalemate()) return "Draw by stalemate.";
+    if (this.chess.isDraw()) return "Draw.";
+    return null;
   }
 
   /** Applies a move given as `from`+`to` (+ optional promotion), returns

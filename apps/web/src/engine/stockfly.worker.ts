@@ -8,7 +8,19 @@ import type { StockFlyRequest, StockFlyResponse } from "./protocol";
 // @ts-ignore -- generated types, not present until the crate is built.
 import init, { StockFlyEngine } from "../wasm-gen/stockfly_wasm.js";
 
-let engine: any = null;
+import { quantize, topNeurons, summarizeRegions } from "../brain/activation";
+import { parseAnnotations } from "../brain/geometry";
+
+let engine: StockFlyEngine | null = null;
+let generation = 0;
+let regions: string[] | null = null;
+let queue = Promise.resolve();
+
+async function fetchRequired(url: string): Promise<Response> {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`Failed to load ${url}: HTTP ${response.status}`);
+  return response;
+}
 
 async function concatBlocks(dir: string, filenames: string[]): Promise<Uint8Array> {
   const parts: Uint8Array[] = [];
@@ -29,45 +41,48 @@ async function concatBlocks(dir: string, filenames: string[]): Promise<Uint8Arra
   return out;
 }
 
-async function loadEngine() {
+async function loadEngine(requestGeneration: number) {
   await init();
 
-  const manifestRes = await fetch("/vendor/graph/manifest.json");
+  const manifestRes = await fetchRequired("/vendor/graph/manifest.json");
   const manifestText = await manifestRes.text();
   const manifest = JSON.parse(manifestText);
 
-  const neuronsRes = await fetch("/vendor/graph/neurons.bin");
-  const offsetsRes = await fetch("/vendor/graph/offsets.bin");
+  const neuronsRes = await fetchRequired("/vendor/graph/neurons.bin");
+  const offsetsRes = await fetchRequired("/vendor/graph/offsets.bin");
   const neurons = new Uint8Array(await neuronsRes.arrayBuffer());
   const offsets = new Uint8Array(await offsetsRes.arrayBuffer());
 
-  const blocks = [...manifest.edge_blocks].sort((a: any, b: any) => a.index - b.index);
-  const srcNames = blocks.map((b: any) => `edge_src_blocks/${String(b.index).padStart(4, "0")}.bin`);
-  const weightNames = blocks.map((b: any) => `edge_weight_blocks/${String(b.index).padStart(4, "0")}.bin`);
+  const blocks = [...manifest.edge_blocks].sort((a: { index: number }, b: { index: number }) => a.index - b.index);
+  const srcNames = blocks.map((b: { index: number }) => `edge_src_blocks/${String(b.index).padStart(4, "0")}.bin`);
+  const weightNames = blocks.map((b: { index: number }) => `edge_weight_blocks/${String(b.index).padStart(4, "0")}.bin`);
   const edgeSrc = await concatBlocks("/vendor/graph", srcNames);
   const edgeWeight = await concatBlocks("/vendor/graph", weightNames);
 
-  const sensoryJson = await (await fetch("/vendor/chess-maps/sensory-map.json")).text();
-  const outputJson = await (await fetch("/vendor/chess-maps/output-map.json")).text();
+  const sensoryJson = await (await fetchRequired("/vendor/chess-maps/sensory-map.json")).text();
+  const outputJson = await (await fetchRequired("/vendor/chess-maps/output-map.json")).text();
 
   engine = new StockFlyEngine(manifestText, neurons, offsets, edgeSrc, edgeWeight, sensoryJson, outputJson);
 
-  // Best-effort: a fresh clone with no checkpoint fetched yet still plays
-  // (as the untrained Stage-0 baseline) rather than failing to load.
+  // Only a genuine 404 means no trained model. Corrupt checkpoints and
+  // network failures are actionable load errors, never a silent baseline.
+  const checkpointRes = await fetch("/vendor/checkpoints/stockfly-bio-full.sfckpt");
+  if (checkpointRes.ok) engine.load_checkpoint(await checkpointRes.text());
+  else if (checkpointRes.status !== 404) throw new Error(`Checkpoint HTTP ${checkpointRes.status}`);
+
+  // Annotations are optional for chess inference. The brain panel reports
+  // unavailable/corrupt metadata; do not invent regions when it is missing.
+  regions = null;
   try {
-    const checkpointRes = await fetch("/vendor/checkpoints/stockfly-bio-full.sfckpt");
-    if (checkpointRes.ok) {
-      const checkpointJson = await checkpointRes.text();
-      engine.load_checkpoint(checkpointJson);
-    }
-  } catch {
-    // No checkpoint available yet -- play as the untrained baseline.
-  }
+    const metadata = await (await fetchRequired("/vendor/brain/metadata.json")).json();
+    regions = parseAnnotations(metadata, engine.neuron_count(), manifest.neurons_sha256).map(row => row[3]);
+  } catch { /* Frames explicitly carry no region summaries without annotations. */ }
 
   const backend = JSON.parse(await engine.initialize_gpu());
 
   post({
     type: "loaded",
+    generation: requestGeneration,
     manifest: {
       neuronCount: engine.neuron_count(),
       edgeCount: engine.edge_count(),
@@ -80,24 +95,41 @@ async function loadEngine() {
   });
 }
 
-function post(msg: StockFlyResponse) {
-  (self as unknown as Worker).postMessage(msg);
+function post(msg: StockFlyResponse, transfer: Transferable[] = []) {
+  (self as unknown as Worker).postMessage(msg, transfer);
 }
 
-self.addEventListener("message", async (event: MessageEvent<StockFlyRequest>) => {
-  const req = event.data;
+async function handle(req: Exclude<StockFlyRequest, { type: "reset" }>) {
+  if (req.generation !== generation) return;
   try {
     if (req.type === "load") {
-      await loadEngine();
-    } else if (req.type === "reset") {
+      engine?.free();
       engine = null;
-    } else if (req.type === "position") {
-      if (!engine) throw new Error("engine not loaded yet");
+      await loadEngine(req.generation);
+    } else {
+      if (!engine) throw new Error("Engine not loaded yet");
       const settleSteps = req.settleSteps ?? 16;
-      const raw = await engine.infer_async(req.fen, settleSteps);
+      if (!Number.isInteger(settleSteps) || settleSteps < 1 || settleSteps > 4096) throw new Error("Invalid settle steps");
+      const started = performance.now();
+      let lastPosted = -Infinity;
+      const raw = await engine.infer_stream(req.fen, settleSteps,
+        async (step: number, tMs: number, rates: Float32Array, backend: string) => {
+          // Yield between real samples: lets resets cancel CPU and GPU work
+          // and limits transferred visualization updates to at most 25 Hz.
+          await new Promise(resolve => setTimeout(resolve, Math.max(0, 40 - (performance.now() - lastPosted))));
+          if (req.generation !== generation) throw new Error("Obsolete inference");
+          const top = topNeurons(rates);
+          const regionRates = regions ? summarizeRegions(rates, regions) : [];
+          const neuronRates = req.frameMode === "full" ? rates : quantize(rates);
+          const buffer = neuronRates instanceof Float32Array ? neuronRates.buffer : neuronRates.values.buffer;
+          lastPosted = performance.now();
+          post({ type: "frame", generation: req.generation, traceId: req.traceId,
+            frame: { step, tMs, elapsedMs: lastPosted - started, backend, neuronRates, topNeurons: top, regionRates } }, [buffer]);
+        });
+      if (req.generation !== generation) return;
       const result = JSON.parse(raw);
       post({
-        type: "decision",
+        type: "decision", generation: req.generation,
         traceId: req.traceId,
         selectedMove: result.selected_move,
         fromRates: result.from_rates,
@@ -114,6 +146,17 @@ self.addEventListener("message", async (event: MessageEvent<StockFlyRequest>) =>
       });
     }
   } catch (e) {
-    post({ type: "error", message: e instanceof Error ? e.message : String(e) });
+    if (req.generation !== generation) return;
+    post({ type: "error", generation: req.generation,
+      ...(req.type === "position" ? { traceId: req.traceId } : {}),
+      message: e instanceof Error ? e.message : String(e) });
   }
+}
+
+self.addEventListener("message", (event: MessageEvent<StockFlyRequest>) => {
+  const req = event.data;
+  // Invalidate immediately; engine mutation remains strictly serialized.
+  if (req.type === "reset") { generation = req.generation; return; }
+  if (req.type === "load") generation = req.generation;
+  queue = queue.then(() => handle(req));
 });

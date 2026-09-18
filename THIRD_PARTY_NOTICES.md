@@ -45,3 +45,13 @@ Standard OSS dependencies (Rust crates, npm packages) retain their own
 licenses as declared in `Cargo.toml` / `package.json` and their respective
 lockfiles. No additional attribution obligations beyond standard OSS
 license compliance apply to those dependencies as of this writing.
+
+## Browser chess pieces
+
+The local SVG chess pieces in `apps/web/public/pieces` are the Cburnett set
+by Colin M. L. Burnett, licensed GPL-2.0-or-later and redistributed here
+under GPL-3.0-or-later. They come from `lichess-org/lila` at revision
+`eff61677731721776ccc7b2b1b39c313c8f143eb`, `public/piece/cburnett`.
+The directory preserves upstream `COPYING.md`, exact source URLs and SHA256
+hashes in `sources.json`, and the applicable GPL-3.0 license text.
+StockFly is not affiliated with Chess.com or Lichess.

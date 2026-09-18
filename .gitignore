@@ -17,3 +17,7 @@ data/vendor/
 
 *.sfckpt
 *.partial
+# Reproducible browser annotations (tools/browser/export_metadata.py).
+data/browser/
+output/playwright/
+.playwright-cli/
