@@ -5,7 +5,7 @@ use sha2::{Digest, Sha256};
 
 pub const PROMOTION_ORDER: [&str; 4] = ["queen", "rook", "bishop", "knight"];
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct OutputMap {
     pub format_version: u32,
     pub seed: u64,
@@ -93,5 +93,31 @@ impl OutputMap {
 
     pub fn promotion_group(&self, name: &str) -> Option<&[u32]> {
         self.promotion_groups.get(name).map(|v| v.as_slice())
+    }
+
+    /// Returns an in-memory control map whose square labels are reassigned
+    /// by `permutation`. Neural group membership and activity are untouched.
+    pub fn permute_square_labels(&self, permutation: &[usize; 64]) -> Result<Self> {
+        let mut seen = [false; 64];
+        for &index in permutation {
+            if index >= 64 || std::mem::replace(&mut seen[index], true) {
+                return Err(OutputMapError::Invariant(
+                    "square permutation must contain each index exactly once".into(),
+                ));
+            }
+        }
+        let mut derived = self.clone();
+        derived.from_groups = permutation
+            .iter()
+            .map(|&index| self.from_groups[index].clone())
+            .collect();
+        derived.to_groups = permutation
+            .iter()
+            .map(|&index| self.to_groups[index].clone())
+            .collect();
+        // This map is an audit-only derived value, not the canonical map
+        // represented by the checkpoint's output-map hash.
+        derived.canonical_json = None;
+        Ok(derived)
     }
 }

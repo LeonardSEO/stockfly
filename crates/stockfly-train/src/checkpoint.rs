@@ -11,7 +11,7 @@ use std::path::Path;
 /// matching the project's transparency goals; a denser binary format can
 /// replace this without changing the trainer once checkpoints grow large
 /// enough to matter.
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Checkpoint {
     pub format_version: u32,
     pub model_kind: String, // "bio-full" | "max-full"

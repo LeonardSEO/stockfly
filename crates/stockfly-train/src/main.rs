@@ -24,6 +24,7 @@ fn main() -> ExitCode {
             eprintln!("usage: stockfly-train <command> [args]");
             eprintln!("commands:");
             eprintln!("  audit-reset --model <checkpoint> --suite <json> [--graph <dir>] [--chess-dir <dir>] [--settle-steps <n>]");
+            eprintln!("  causal-audit --model <checkpoint> --suite <json> --metadata <json> [--ablate-region <name>] [seed/calibration options]");
             eprintln!("  infer-untrained --fen <fen|startpos> [--graph <dir>] [--chess-dir <dir>]");
             eprintln!("  train --kind <bio-full|max-full> --preset <smoke|quick|standard|overnight> --curriculum <path> --out <path.sfckpt>");
             return ExitCode::FAILURE;
@@ -34,6 +35,10 @@ fn main() -> ExitCode {
         "audit-reset" => match stockfly_train::audit::run_cli(args) {
             Ok(report) => { println!("{report}"); ExitCode::SUCCESS }
             Err(e) => { eprintln!("audit failed: {e}"); ExitCode::FAILURE }
+        },
+        "causal-audit" => match stockfly_train::audit::run_causal_cli(args) {
+            Ok(report) => { println!("{report}"); ExitCode::SUCCESS }
+            Err(e) => { eprintln!("causal audit failed: {e}"); ExitCode::FAILURE }
         },
         "infer-untrained" => cmd_infer_untrained(args),
         "train" => cmd_train(args),

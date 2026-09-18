@@ -56,19 +56,42 @@ impl<'a> CpuSimulator<'a> {
     pub fn connectome_edge_src(&self, edge_index: usize) -> u32 {
         self.connectome.edge_src[edge_index]
     }
-}
 
-impl<'a> Simulator for CpuSimulator<'a> {
-    fn step(&mut self, stimulus: &Stimulus) -> FrameSummary {
+    /// Advances one step while silencing selected neurons. Silenced rates
+    /// cannot contribute to any outgoing edge and are forced back to zero
+    /// after stimulus/recurrent integration, so direct stimulus cannot make
+    /// an ablated neuron leak activity into a later step.
+    pub fn step_with_silenced(&mut self, stimulus: &Stimulus, silenced: &[bool]) -> FrameSummary {
+        assert_eq!(
+            silenced.len(),
+            self.connectome.neurons.len(),
+            "silenced mask must match neuron count"
+        );
+        self.step_impl(stimulus, Some(silenced))
+    }
+
+    fn step_impl(&mut self, stimulus: &Stimulus, silenced: Option<&[bool]>) -> FrameSummary {
         let neuron_count = self.connectome.neurons.len();
         debug_assert_eq!(stimulus.values.len(), neuron_count);
 
-        let prev_rate = self.state.rate.clone();
+        let mut prev_rate = self.state.rate.clone();
+        if let Some(mask) = silenced {
+            for (rate, &disabled) in prev_rate.iter_mut().zip(mask) {
+                if disabled {
+                    *rate = 0.0;
+                }
+            }
+        }
         let offsets = &self.connectome.offsets;
         let edge_src = &self.connectome.edge_src;
         let edge_weight = &self.edge_weight;
 
         for dst in 0..neuron_count {
+            if silenced.is_some_and(|mask| mask[dst]) {
+                self.state.membrane[dst] = 0.0;
+                self.state.rate[dst] = 0.0;
+                continue;
+            }
             let start = offsets[dst] as usize;
             let end = offsets[dst + 1] as usize;
             let mut input = 0.0f32;
@@ -79,23 +102,28 @@ impl<'a> Simulator for CpuSimulator<'a> {
             let stim = stimulus.values.get(dst).copied().unwrap_or(0.0);
             let membrane = self.state.membrane[dst] * self.config.decay + input + stim;
             self.state.membrane[dst] = membrane;
-            self.state.rate[dst] = (membrane - self.config.threshold).clamp(0.0, self.config.max_rate);
+            self.state.rate[dst] =
+                (membrane - self.config.threshold).clamp(0.0, self.config.max_rate);
         }
 
         self.step_count += 1;
-
         let max_rate = self.state.rate.iter().cloned().fold(0.0f32, f32::max);
         let mean_rate = if neuron_count > 0 {
             self.state.rate.iter().sum::<f32>() / neuron_count as f32
         } else {
             0.0
         };
-
         FrameSummary {
             step: self.step_count,
             max_rate,
             mean_rate,
         }
+    }
+}
+
+impl<'a> Simulator for CpuSimulator<'a> {
+    fn step(&mut self, stimulus: &Stimulus) -> FrameSummary {
+        self.step_impl(stimulus, None)
     }
 
     fn reset(&mut self) {

@@ -59,3 +59,27 @@ difference does not establish improved playing strength. See the checked-in
 [summary and input hashes](bio-weight-reset-2026-09-18.summary.json). The complete
 local report, including all per-position results, is at
 `data/reports/bio-weight-reset-2026-09-18.json` (git-ignored).
+
+## Full causal controls
+
+Generate graph-aligned transmitter and region metadata into the ignored report
+directory, build the native evaluator, then run all controls:
+
+```sh
+.venv/bin/python tools/audit/export_neuron_metadata.py \
+  --out data/reports/malecns-v1-audit-metadata.json
+cargo build -p stockfly-train --release
+python3 tools/audit/causal_controls.py \
+  --model data/checkpoints/stockfly-bio-full.sfckpt \
+  --metadata data/reports/malecns-v1-audit-metadata.json \
+  --out data/reports/bio-causal-controls.json
+```
+
+The native evaluator runs intact, weight-reset, shuffled-graph, selected
+MaleCNS-superclass population ablation, output-label permutation, and fixed
+random brain-bypass conditions.
+The wrapper verifies all compiled blocks and hashes the checkpoint, suite, maps,
+metadata, and executable before and after evaluation. Reports record seeds,
+calibration, graph/control statistics, per-position decisions, measured deltas,
+and limitations. No report declares a scientific pass from implementation tests;
+the observed control deltas must be interpreted against a preregistered criterion.
