@@ -1,0 +1,16 @@
+/target
+node_modules/
+dist/
+.DS_Store
+
+# Raw upstream MaleCNS data is never committed (redistribution terms unverified).
+data/raw/
+# Compiled/derived artifacts are large binaries: distributed via GitHub Releases, not git.
+data/compiled/
+data/teacher/
+data/checkpoints/
+data/reports/
+data/vendor/
+
+*.sfckpt
+*.partial

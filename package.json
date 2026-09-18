@@ -1,0 +1,14 @@
+{
+  "name": "stockfly",
+  "private": true,
+  "version": "0.1.0",
+  "description": "A local, browser-first chess engine where a simulated full fruit-fly (Drosophila) connectome chooses the moves.",
+  "license": "GPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/LeonardSEO/stockfly"
+  },
+  "workspaces": [
+    "apps/web"
+  ]
+}
