@@ -64,12 +64,18 @@ async function loadEngine() {
     // No checkpoint available yet -- play as the untrained baseline.
   }
 
+  const backend = JSON.parse(await engine.initialize_gpu());
+
   post({
     type: "loaded",
     manifest: {
       neuronCount: engine.neuron_count(),
       edgeCount: engine.edge_count(),
       graphNeuronsSha256: manifest.neurons_sha256,
+      modelLabel: engine.model_label(),
+      backend: backend.backend,
+      adapter: backend.adapter,
+      ...(backend.fallback_reason ? { fallbackReason: backend.fallback_reason } : {}),
     },
   });
 }
@@ -88,7 +94,7 @@ self.addEventListener("message", async (event: MessageEvent<StockFlyRequest>) =>
     } else if (req.type === "position") {
       if (!engine) throw new Error("engine not loaded yet");
       const settleSteps = req.settleSteps ?? 16;
-      const raw = engine.infer(req.fen, settleSteps);
+      const raw = await engine.infer_async(req.fen, settleSteps);
       const result = JSON.parse(raw);
       post({
         type: "decision",
@@ -101,6 +107,10 @@ self.addEventListener("message", async (event: MessageEvent<StockFlyRequest>) =>
         graphNeuronsSha256: result.graph_neurons_sha256,
         sensoryMapSha256: result.sensory_map_sha256,
         outputMapSha256: result.output_map_sha256,
+        backend: result.backend,
+        adapter: result.adapter,
+        ...(result.gpu_fallback_reason ? { fallbackReason: result.gpu_fallback_reason } : {}),
+        modelLabel: result.model_label,
       });
     }
   } catch (e) {

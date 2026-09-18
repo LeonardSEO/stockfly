@@ -2,6 +2,10 @@ export interface ModelManifestInfo {
   neuronCount: number;
   edgeCount: number;
   graphNeuronsSha256: string;
+  modelLabel: string;
+  backend: string;
+  adapter: string;
+  fallbackReason?: string;
 }
 
 export type StockFlyRequest =
@@ -23,6 +27,10 @@ export type StockFlyResponse =
       graphNeuronsSha256: string;
       sensoryMapSha256: string;
       outputMapSha256: string;
+      backend: string;
+      adapter: string;
+      fallbackReason?: string;
+      modelLabel: string;
     };
 
 /** Exhaustive-switch guard: a compile error here means a new

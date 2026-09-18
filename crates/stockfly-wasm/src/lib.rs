@@ -18,7 +18,7 @@ use stockfly_chess::output_map::OutputMap;
 use stockfly_chess::policy::choose_move;
 use stockfly_chess::sensory::{encode_position, SensoryMap};
 use stockfly_connectome::Connectome;
-use stockfly_sim::{CpuSimulator, SimConfig, Simulator};
+use stockfly_sim::{CpuSimulator, GpuAdapterOptions, GpuSimulator, SimConfig, Simulator};
 use stockfly_train::checkpoint::Checkpoint;
 
 #[wasm_bindgen]
@@ -34,6 +34,8 @@ pub struct StockFlyEngine {
     /// Human-readable label for whichever checkpoint (if any) is loaded,
     /// shown in the UI's model badge.
     model_label: String,
+    gpu: Option<GpuSimulator>,
+    gpu_fallback_reason: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -50,6 +52,16 @@ struct InferResponse {
     neuron_count: usize,
     edge_count: usize,
     model_label: String,
+    backend: String,
+    adapter: String,
+    gpu_fallback_reason: Option<String>,
+}
+
+#[derive(Serialize)]
+struct BackendResponse {
+    backend: String,
+    adapter: String,
+    fallback_reason: Option<String>,
 }
 
 #[wasm_bindgen]
@@ -78,11 +90,16 @@ impl StockFlyEngine {
         )
         .map_err(|e| js_err(e.to_string()))?;
 
-        let sensory_map = SensoryMap::load_str(sensory_map_json).map_err(|e| js_err(e.to_string()))?;
+        let sensory_map =
+            SensoryMap::load_str(sensory_map_json).map_err(|e| js_err(e.to_string()))?;
         let output_map = OutputMap::load_str(output_map_json).map_err(|e| js_err(e.to_string()))?;
 
         let weight_scale = SimConfig::default().weight_scale;
-        let weights = connectome.edge_weight.iter().map(|w| w * weight_scale).collect();
+        let weights = connectome
+            .edge_weight
+            .iter()
+            .map(|w| w * weight_scale)
+            .collect();
 
         Ok(StockFlyEngine {
             connectome,
@@ -90,6 +107,8 @@ impl StockFlyEngine {
             output_map,
             weights,
             model_label: "untrained baseline".to_string(),
+            gpu: None,
+            gpu_fallback_reason: Some("WebGPU initialization has not run".to_string()),
         })
     }
 
@@ -111,10 +130,51 @@ impl StockFlyEngine {
     /// only changes `self.weights`, the same design as the native
     /// trainer's `Checkpoint::apply_to`.
     pub fn load_checkpoint(&mut self, checkpoint_json: &str) -> Result<usize, JsValue> {
-        let checkpoint: Checkpoint = serde_json::from_str(checkpoint_json).map_err(|e| js_err(e.to_string()))?;
+        let checkpoint: Checkpoint =
+            serde_json::from_str(checkpoint_json).map_err(|e| js_err(e.to_string()))?;
         let touched = checkpoint.apply_to(&mut self.weights);
+        if let Some(gpu) = self.gpu.as_mut() {
+            gpu.set_weights(&self.connectome, &self.weights)
+                .map_err(|error| js_err(error.to_string()))?;
+        }
         self.model_label = checkpoint.model_kind.clone();
         Ok(touched)
+    }
+
+    /// Requests a browser WebGPU device and uploads the current learned
+    /// weights. Failures are represented as an explicit CPU/WASM backend so
+    /// the worker can display the fallback rather than mislabeling it as GPU.
+    pub async fn initialize_gpu(&mut self) -> Result<String, JsValue> {
+        let result = GpuSimulator::new_with_weights_async(
+            &self.connectome,
+            SimConfig::default(),
+            GpuAdapterOptions::default(),
+            &self.weights,
+        )
+        .await;
+        let response = match result {
+            Ok(gpu) => {
+                let response = BackendResponse {
+                    backend: gpu.backend().to_string(),
+                    adapter: gpu.adapter_name().to_string(),
+                    fallback_reason: None,
+                };
+                self.gpu = Some(gpu);
+                self.gpu_fallback_reason = None;
+                response
+            }
+            Err(error) => {
+                let reason = error.to_string();
+                self.gpu = None;
+                self.gpu_fallback_reason = Some(reason.clone());
+                BackendResponse {
+                    backend: "cpu-wasm".to_string(),
+                    adapter: "CPU/WASM".to_string(),
+                    fallback_reason: Some(reason),
+                }
+            }
+        };
+        serde_json::to_string(&response).map_err(|error| js_err(error.to_string()))
     }
 
     /// Runs the full encode -> settle -> decide pipeline for one position
@@ -123,8 +183,8 @@ impl StockFlyEngine {
     /// chose it.
     pub fn infer(&self, fen: &str, settle_steps: u32) -> Result<String, JsValue> {
         let neuron_count = self.connectome.neurons.len();
-        let stimulus =
-            encode_position(fen, &self.sensory_map, neuron_count).map_err(|e| js_err(e.to_string()))?;
+        let stimulus = encode_position(fen, &self.sensory_map, neuron_count)
+            .map_err(|e| js_err(e.to_string()))?;
 
         let config = SimConfig {
             settle_steps,
@@ -137,8 +197,78 @@ impl StockFlyEngine {
         }
         let rates = &sim.state().rate;
 
-        let decision = choose_move(fen, rates, &self.output_map).map_err(|e| js_err(e.to_string()))?;
+        self.serialize_inference(
+            fen,
+            settle_steps,
+            rates,
+            "cpu-wasm".to_string(),
+            "CPU/WASM".to_string(),
+            self.gpu_fallback_reason.clone(),
+        )
+    }
 
+    /// Browser inference path. GPU batches all settle steps and awaits one
+    /// asynchronous readback. A runtime WebGPU failure retries the same
+    /// request on CPU/WASM and records the exact fallback reason.
+    pub async fn infer_async(&mut self, fen: &str, settle_steps: u32) -> Result<String, JsValue> {
+        let neuron_count = self.connectome.neurons.len();
+        let stimulus = encode_position(fen, &self.sensory_map, neuron_count)
+            .map_err(|e| js_err(e.to_string()))?;
+
+        let gpu_result = if let Some(gpu) = self.gpu.as_mut() {
+            gpu.reset_state();
+            Some(gpu.run_steps_async(&stimulus, settle_steps).await)
+        } else {
+            None
+        };
+
+        match gpu_result {
+            Some(Ok(_)) => {
+                let gpu = self.gpu.as_ref().unwrap();
+                let rates = gpu.state().rate.clone();
+                let backend = gpu.backend().to_string();
+                let adapter = gpu.adapter_name().to_string();
+                return self.serialize_inference(fen, settle_steps, &rates, backend, adapter, None);
+            }
+            Some(Err(error)) => {
+                self.gpu_fallback_reason = Some(error.to_string());
+                self.gpu = None;
+            }
+            None => {}
+        }
+
+        let config = SimConfig {
+            settle_steps,
+            ..SimConfig::default()
+        };
+        let mut sim = CpuSimulator::new(&self.connectome, config);
+        sim.weights_mut().copy_from_slice(&self.weights);
+        for _ in 0..settle_steps {
+            sim.step(&stimulus);
+        }
+        self.serialize_inference(
+            fen,
+            settle_steps,
+            &sim.state().rate,
+            "cpu-wasm".to_string(),
+            "CPU/WASM".to_string(),
+            self.gpu_fallback_reason.clone(),
+        )
+    }
+}
+
+impl StockFlyEngine {
+    fn serialize_inference(
+        &self,
+        fen: &str,
+        settle_steps: u32,
+        rates: &[f32],
+        backend: String,
+        adapter: String,
+        gpu_fallback_reason: Option<String>,
+    ) -> Result<String, JsValue> {
+        let decision =
+            choose_move(fen, rates, &self.output_map).map_err(|e| js_err(e.to_string()))?;
         let mut top_neurons: Vec<(u32, f32)> = rates
             .iter()
             .enumerate()
@@ -158,9 +288,12 @@ impl StockFlyEngine {
             sensory_map_sha256: self.sensory_map.sha256().to_string(),
             output_map_sha256: self.output_map.sha256().to_string(),
             settle_steps,
-            neuron_count,
+            neuron_count: self.connectome.neurons.len(),
             edge_count: self.connectome.edge_src.len(),
             model_label: self.model_label.clone(),
+            backend,
+            adapter,
+            gpu_fallback_reason,
         };
 
         serde_json::to_string(&response).map_err(|e| js_err(e.to_string()))

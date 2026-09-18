@@ -28,7 +28,9 @@ worker.addEventListener("message", (event: MessageEvent<StockFlyResponse>) => {
   const msg = event.data;
   if (msg.type === "loaded") {
     modelInfo = msg.manifest;
-    statusText = "Your move (you play White).";
+    statusText = msg.manifest.fallbackReason
+      ? `Your move (CPU fallback: ${msg.manifest.fallbackReason}).`
+      : `Your move (${msg.manifest.backend} on ${msg.manifest.adapter}).`;
   } else if (msg.type === "decision") {
     lastDecision = msg;
     flyThinking = false;
@@ -111,7 +113,7 @@ function render() {
   for (let rank = 0; rank < 8; rank++) for (let file = 0; file < 8; file++) squareLabels.push(`${FILES[file]}${rank + 1}`);
 
   app.innerHTML = `
-    <h1>StockFly <span class="badge">${modelInfo ? "Bio Full" : "loading"}</span></h1>
+    <h1>StockFly <span class="badge">${modelInfo ? escapeHtml(modelInfo.modelLabel) : "loading"}</span></h1>
     <p class="status">${escapeHtml(statusText)}</p>
     <div class="layout">
       <div class="board">${renderBoard()}</div>
@@ -119,7 +121,7 @@ function render() {
         <h2>Model</h2>
         ${
           modelInfo
-            ? `<p class="status">neurons: ${modelInfo.neuronCount.toLocaleString()}<br>edges: ${modelInfo.edgeCount.toLocaleString()}<br>graph hash: ${modelInfo.graphNeuronsSha256.slice(0, 12)}...</p>`
+            ? `<p class="status">neurons: ${modelInfo.neuronCount.toLocaleString()}<br>edges: ${modelInfo.edgeCount.toLocaleString()}<br>backend: ${escapeHtml(modelInfo.backend)}<br>adapter: ${escapeHtml(modelInfo.adapter)}<br>graph hash: ${modelInfo.graphNeuronsSha256.slice(0, 12)}...</p>`
             : `<p class="status">loading full connectome into WebAssembly...</p>`
         }
         <h2>Selected move</h2>
