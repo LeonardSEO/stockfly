@@ -1,0 +1,19 @@
+[package]
+name = "stockfly-server"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "stockfly-server"
+path = "src/main.rs"
+
+[dependencies]
+tiny_http = "0.12"
+serde_json.workspace = true
+
+[dev-dependencies]
+ureq = "3"
+tempfile = "3"
+serde_json.workspace = true

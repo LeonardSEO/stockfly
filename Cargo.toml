@@ -8,6 +8,7 @@ members = [
     "crates/stockfly-train",
     "crates/stockfly-plasticity",
     "crates/stockfly-wasm",
+    "crates/stockfly-server",
 ]
 
 [workspace.package]
