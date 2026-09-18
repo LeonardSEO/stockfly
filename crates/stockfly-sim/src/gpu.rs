@@ -2,6 +2,7 @@ use std::fmt;
 use std::ops::Range;
 
 use futures_channel::oneshot;
+use sha2::{Digest, Sha256};
 use stockfly_connectome::Connectome;
 
 use crate::gpu_buffers::{build_edge_chunks, ChunkError, MAX_EDGE_BUFFER_BYTES};
@@ -87,6 +88,8 @@ pub struct GpuSimulator {
     adapter_name: String,
     backend: String,
     peak_buffer_bytes: u64,
+    topology_digest: [u8; 32],
+    edge_count: usize,
 }
 
 impl GpuSimulator {
@@ -149,6 +152,7 @@ impl GpuSimulator {
         }
 
         let cpu_chunks = build_edge_chunks(connectome, weights, MAX_EDGE_BUFFER_BYTES)?;
+        let topology_digest = topology_digest(connectome);
 
         #[cfg(target_arch = "wasm32")]
         let backends = wgpu::Backends::BROWSER_WEBGPU;
@@ -412,6 +416,8 @@ impl GpuSimulator {
             adapter_name: adapter_info.name,
             backend: format!("{:?}", adapter_info.backend).to_lowercase(),
             peak_buffer_bytes,
+            topology_digest,
+            edge_count: connectome.edge_src.len(),
         })
     }
 
@@ -452,13 +458,7 @@ impl GpuSimulator {
         connectome: &Connectome,
         weights: &[f32],
     ) -> Result<(), GpuError> {
-        if connectome.edge_src.len() != weights.len() {
-            return Err(GpuError::InvalidInput(format!(
-                "weight count {} does not match edge count {}",
-                weights.len(),
-                connectome.edge_src.len()
-            )));
-        }
+        validate_weight_upload(&self.topology_digest, self.edge_count, connectome, weights)?;
         for chunk in &self.chunks {
             let bytes = encode_edge_range(connectome, weights, chunk.edge_range.clone());
             if bytes.len() as u64 > MAX_EDGE_BUFFER_BYTES {
@@ -796,4 +796,91 @@ fn encode_lif_params(config: SimConfig, neuron_count: u32) -> Vec<u8> {
 
 fn div_ceil_u32(value: u32, divisor: u32) -> u32 {
     value / divisor + u32::from(value % divisor != 0)
+}
+
+fn topology_digest(connectome: &Connectome) -> [u8; 32] {
+    let mut digest = Sha256::new();
+    digest.update((connectome.offsets.len() as u64).to_le_bytes());
+    for offset in &connectome.offsets {
+        digest.update(offset.to_le_bytes());
+    }
+    digest.update((connectome.edge_src.len() as u64).to_le_bytes());
+    for source in &connectome.edge_src {
+        digest.update(source.to_le_bytes());
+    }
+    digest.finalize().into()
+}
+
+fn validate_weight_upload(
+    expected_topology_digest: &[u8; 32],
+    expected_edge_count: usize,
+    connectome: &Connectome,
+    weights: &[f32],
+) -> Result<(), GpuError> {
+    if weights.len() != expected_edge_count {
+        return Err(GpuError::InvalidInput(format!(
+            "weight count {} does not match GPU edge count {expected_edge_count}",
+            weights.len()
+        )));
+    }
+    if connectome.edge_src.len() != expected_edge_count
+        || topology_digest(connectome) != *expected_topology_digest
+    {
+        return Err(GpuError::InvalidInput(
+            "connectome offsets or source indices do not match the GPU topology".to_string(),
+        ));
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use stockfly_connectome::format::{CompiledManifest, SignPolicy};
+    use stockfly_connectome::{Connectome, NeuronRecord};
+
+    use super::*;
+
+    fn graph(edge_src: Vec<u32>) -> Connectome {
+        Connectome {
+            manifest: CompiledManifest {
+                format_version: 1,
+                dataset: "topology-test".to_string(),
+                neuron_count: 2,
+                edge_count: 2,
+                neurons_sha256: "unused".to_string(),
+                offsets_sha256: "unused".to_string(),
+                edge_blocks: Vec::new(),
+                sign_policy: SignPolicy {
+                    excitatory_transmitters: Vec::new(),
+                    inhibitory_transmitters: Vec::new(),
+                    unresolved_default: "excitatory".to_string(),
+                    source_column: "unused".to_string(),
+                    derived_from: "unused".to_string(),
+                },
+            },
+            neurons: vec![NeuronRecord { body_id: 1 }, NeuronRecord { body_id: 2 }],
+            offsets: vec![0, 1, 2],
+            edge_src,
+            edge_weight: vec![1.0, 1.0],
+        }
+    }
+
+    #[test]
+    fn weight_upload_rejects_same_sized_different_topology() {
+        let original = graph(vec![0, 1]);
+        let different_sources = graph(vec![1, 0]);
+        let expected_digest = topology_digest(&original);
+
+        let error = validate_weight_upload(
+            &expected_digest,
+            original.edge_src.len(),
+            &different_sources,
+            &[0.5, 0.75],
+        )
+        .unwrap_err();
+
+        assert!(error
+            .to_string()
+            .contains("offsets or source indices do not match"));
+    }
 }
