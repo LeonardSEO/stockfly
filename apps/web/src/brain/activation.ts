@@ -1,6 +1,13 @@
 /** Rates are dimensionless values of the documented LIF/rate-hybrid model. */
 export const MAX_RATE = 20;
 export interface QuantizedActivation { values: Uint8Array; maxRate: number }
+export interface DecisionReadout {
+  selectedMove: string;
+  fromRates: number[];
+  toRates: number[];
+  promotionRates: number[];
+  legalScores: Array<{ move: string; score: number }>;
+}
 export interface ActivationFrame {
   step: number;
   tMs: number;
@@ -9,6 +16,7 @@ export interface ActivationFrame {
   neuronRates: Float32Array | QuantizedActivation;
   topNeurons: Array<{ denseIndex: number; rate: number }>;
   regionRates: Array<{ region: string; rate: number; neuronCount: number }>;
+  decision: DecisionReadout;
 }
 export function intensity(rate: number, maxRate = MAX_RATE): number {
   return Math.max(0, Math.min(1, Number.isFinite(rate) ? rate / maxRate : 0));

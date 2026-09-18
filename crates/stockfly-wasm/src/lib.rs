@@ -41,6 +41,7 @@ pub struct StockFlyEngine {
 #[derive(Serialize)]
 struct InferResponse {
     selected_move: String,
+    legal_scores: Vec<(String, f32)>,
     from_rates: Vec<f32>,
     to_rates: Vec<f32>,
     promotion_rates: Vec<f32>,
@@ -55,6 +56,15 @@ struct InferResponse {
     backend: String,
     adapter: String,
     gpu_fallback_reason: Option<String>,
+}
+
+#[derive(Serialize)]
+struct FrameDecisionResponse {
+    selected_move: String,
+    legal_scores: Vec<(String, f32)>,
+    from_rates: Vec<f32>,
+    to_rates: Vec<f32>,
+    promotion_rates: Vec<f32>,
 }
 
 #[derive(Serialize)]
@@ -136,11 +146,14 @@ impl StockFlyEngine {
             || checkpoint.graph_neurons_sha256 != self.connectome.manifest.neurons_sha256
             || checkpoint.sensory_map_sha256 != self.sensory_map.sha256()
             || checkpoint.output_map_sha256 != self.output_map.sha256()
-            || checkpoint.deltas.iter().any(|(index, value)| {
-                *index as usize >= self.weights.len() || !value.is_finite()
-            })
+            || checkpoint
+                .deltas
+                .iter()
+                .any(|(index, value)| *index as usize >= self.weights.len() || !value.is_finite())
         {
-            return Err(js_err("checkpoint is incompatible with the loaded graph/maps"));
+            return Err(js_err(
+                "checkpoint is incompatible with the loaded graph/maps",
+            ));
         }
         let touched = checkpoint.apply_to(&mut self.weights);
         if let Some(gpu) = self.gpu.as_mut() {
@@ -241,7 +254,17 @@ impl StockFlyEngine {
                     break;
                 }
                 step += count;
-                emit_frame(&on_frame, step, dt_ms, &gpu.state().rate, gpu.backend()).await?;
+                let decision_json =
+                    serialize_frame_decision(fen, &gpu.state().rate, &self.output_map)?;
+                emit_frame(
+                    &on_frame,
+                    step,
+                    dt_ms,
+                    &gpu.state().rate,
+                    gpu.backend(),
+                    &decision_json,
+                )
+                .await?;
             }
             if let Some(reason) = failure {
                 self.gpu_fallback_reason = Some(reason);
@@ -253,19 +276,81 @@ impl StockFlyEngine {
                 return self.serialize_inference(fen, settle_steps, &rates, backend, adapter, None);
             }
         }
-        let config = SimConfig { settle_steps, ..SimConfig::default() };
+        let config = SimConfig {
+            settle_steps,
+            ..SimConfig::default()
+        };
         let mut sim = CpuSimulator::new(&self.connectome, config);
         sim.weights_mut().copy_from_slice(&self.weights);
         for step in 1..=settle_steps {
             sim.step(&stimulus);
             if step % interval == 0 || step == settle_steps {
-                emit_frame(&on_frame, step, dt_ms, &sim.state().rate, "cpu-wasm").await?;
+                let decision_json =
+                    serialize_frame_decision(fen, &sim.state().rate, &self.output_map)?;
+                emit_frame(
+                    &on_frame,
+                    step,
+                    dt_ms,
+                    &sim.state().rate,
+                    "cpu-wasm",
+                    &decision_json,
+                )
+                .await?;
             }
         }
         self.serialize_inference(
-            fen, settle_steps, &sim.state().rate,
-            "cpu-wasm".to_string(), "CPU/WASM".to_string(),
+            fen,
+            settle_steps,
+            &sim.state().rate,
+            "cpu-wasm".to_string(),
+            "CPU/WASM".to_string(),
             self.gpu_fallback_reason.clone(),
+        )
+    }
+
+    /// Deterministic CPU reference replay with the same sampled step
+    /// boundaries as `infer_stream`. This is deliberately separate from the
+    /// selected live backend so callers can report CPU replay/reference
+    /// evidence without implying general GPU/CPU parity.
+    pub async fn infer_cpu_stream(
+        &self,
+        fen: &str,
+        settle_steps: u32,
+        on_frame: js_sys::Function,
+    ) -> Result<String, JsValue> {
+        let stimulus = encode_position(fen, &self.sensory_map, self.connectome.neurons.len())
+            .map_err(|e| js_err(e.to_string()))?;
+        let interval = settle_steps.div_ceil(16).max(1);
+        let dt_ms = SimConfig::default().dt_ms;
+        let config = SimConfig {
+            settle_steps,
+            ..SimConfig::default()
+        };
+        let mut sim = CpuSimulator::new(&self.connectome, config);
+        sim.weights_mut().copy_from_slice(&self.weights);
+        for step in 1..=settle_steps {
+            sim.step(&stimulus);
+            if step % interval == 0 || step == settle_steps {
+                let decision_json =
+                    serialize_frame_decision(fen, &sim.state().rate, &self.output_map)?;
+                emit_frame(
+                    &on_frame,
+                    step,
+                    dt_ms,
+                    &sim.state().rate,
+                    "cpu-wasm",
+                    &decision_json,
+                )
+                .await?;
+            }
+        }
+        self.serialize_inference(
+            fen,
+            settle_steps,
+            &sim.state().rate,
+            "cpu-wasm".to_string(),
+            "CPU/WASM".to_string(),
+            None,
         )
     }
 
@@ -342,6 +427,7 @@ impl StockFlyEngine {
 
         let response = InferResponse {
             selected_move: decision.uci,
+            legal_scores: decision.legal_scores,
             from_rates: decision.from_rates.to_vec(),
             to_rates: decision.to_rates.to_vec(),
             promotion_rates: decision.promotion_rates.to_vec(),
@@ -362,6 +448,22 @@ impl StockFlyEngine {
     }
 }
 
+fn serialize_frame_decision(
+    fen: &str,
+    rates: &[f32],
+    output_map: &OutputMap,
+) -> Result<String, JsValue> {
+    let decision = choose_move(fen, rates, output_map).map_err(|e| js_err(e.to_string()))?;
+    serde_json::to_string(&FrameDecisionResponse {
+        selected_move: decision.uci,
+        legal_scores: decision.legal_scores,
+        from_rates: decision.from_rates.to_vec(),
+        to_rates: decision.to_rates.to_vec(),
+        promotion_rates: decision.promotion_rates.to_vec(),
+    })
+    .map_err(|e| js_err(e.to_string()))
+}
+
 fn js_err(e: impl ToString) -> JsValue {
     JsValue::from_str(&e.to_string())
 }
@@ -372,6 +474,7 @@ async fn emit_frame(
     dt_ms: f32,
     rates: &[f32],
     backend: &str,
+    decision_json: &str,
 ) -> Result<(), JsValue> {
     // Copy before crossing the async boundary: a view into WASM memory
     // would become invalid if the linear memory grows while JS is awaiting.
@@ -381,6 +484,7 @@ async fn emit_frame(
     args.push(&JsValue::from(step as f32 * dt_ms));
     args.push(&values);
     args.push(&JsValue::from_str(backend));
+    args.push(&JsValue::from_str(decision_json));
     let result = callback.apply(&JsValue::NULL, &args)?;
     wasm_bindgen_futures::JsFuture::from(js_sys::Promise::resolve(&result)).await?;
     Ok(())

@@ -1,23 +1,59 @@
 import type { ActivationFrame } from "../brain/activation";
+import type { MoveTrace } from "../traces/MoveTrace";
+
+export function modelTruthBadge(modelKind: string): string {
+  if (modelKind === "bio-full") return "BIO FULL · complete MaleCNS";
+  if (modelKind === "max-full") return "MAX FULL · complete MaleCNS";
+  if (modelKind === "lite") return "LITE · pruned MaleCNS subset";
+  if (modelKind === "untrained baseline") return "UNTRAINED · complete MaleCNS baseline";
+  throw new Error(`Unsupported model kind: ${modelKind}`);
+}
+
 export interface ModelManifestInfo {
   neuronCount: number;
   edgeCount: number;
   graphNeuronsSha256: string;
+  graphManifestSha256: string;
+  sensoryMapSha256: string;
+  outputMapSha256: string;
+  checkpointSha256: string | null;
   modelLabel: string;
+  modelBadge: string;
   backend: string;
   adapter: string;
   fallbackReason?: string;
 }
 
+export interface TraceVerification {
+  mode: "cpu-replay" | "cpu-reference";
+  passed: boolean;
+  provenanceMatches: boolean;
+  decisionPathMatches: boolean;
+  finalMoveMatches: boolean;
+  expectedMove: string;
+  actualMove: string;
+  maxActivationDifference: number;
+  activationTolerance: number;
+  maxDecisionRateDifference: number;
+  decisionRateTolerance: number;
+  cpuReplayPassed: boolean;
+  recordedTraceMatches: boolean;
+  maxCpuReplayActivationDifference: number;
+  maxCpuReplayDecisionRateDifference: number;
+  note: string;
+}
+
 export type StockFlyRequest =
   | { type: "load"; generation: number }
   | { type: "position"; fen: string; traceId: string; generation: number; settleSteps?: number; frameMode?: "quantized" | "full" }
+  | { type: "verify-trace"; generation: number; verificationId: string; trace: MoveTrace }
   | { type: "reset"; generation: number };
 
 export type StockFlyResponse =
   | { type: "loaded"; generation: number; manifest: ModelManifestInfo }
-  | { type: "error"; generation: number; traceId?: string; message: string }
+  | { type: "error"; generation: number; traceId?: string; verificationId?: string; message: string }
   | { type: "frame"; generation: number; traceId: string; frame: ActivationFrame }
+  | { type: "verification"; generation: number; verificationId: string; result: TraceVerification }
   | {
       type: "decision";
       traceId: string;
@@ -26,10 +62,13 @@ export type StockFlyResponse =
       fromRates: number[];
       toRates: number[];
       promotionRates: number[];
+      legalScores: Array<{ move: string; score: number }>;
       settleSteps: number;
       graphNeuronsSha256: string;
+      graphManifestSha256: string;
       sensoryMapSha256: string;
       outputMapSha256: string;
+      checkpointSha256: string | null;
       backend: string;
       adapter: string;
       fallbackReason?: string;
