@@ -1,0 +1,26 @@
+{
+  "dataset": "malecns-v1",
+  "base_url": "https://storage.googleapis.com/flyem-male-cns/v1.0/connectome-data/flat-connectome",
+  "license": "CC-BY-4.0",
+  "source": "https://male-cns.janelia.org/download/",
+  "artifacts": [
+    {
+      "name": "connectome_weights",
+      "filename": "connectome-weights-male-cns-v1.0-minconf-0.5.feather",
+      "description": "Segment-to-segment connection strengths for all segments in the dataset.",
+      "approx_bytes": 1181116006
+    },
+    {
+      "name": "annotations",
+      "filename": "body-annotations-male-cns-v1.0-minconf-0.5.feather",
+      "description": "Curated neuron annotations (classes, types, sides, soma location), excluding neurotransmitter properties.",
+      "approx_bytes": 13631488
+    },
+    {
+      "name": "neurotransmitters",
+      "filename": "body-neurotransmitters-male-cns-v1.0.feather",
+      "description": "Aggregate neurotransmitter predictions for each neuron, used to derive connection sign.",
+      "approx_bytes": 44040192
+    }
+  ]
+}

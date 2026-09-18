@@ -1,0 +1,13 @@
+[package]
+name = "stockfly-sim"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+stockfly-connectome = { path = "../stockfly-connectome" }
+
+[dev-dependencies]
+tempfile = "3"
+serde_json.workspace = true
