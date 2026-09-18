@@ -135,12 +135,12 @@ localhost
 - [x] Stockfish 19 (local, via Homebrew) curriculum teacher + local Bio plasticity training pipeline; Max mode implemented, less tuned so far
 - [x] Local browser app: Human vs StockFly, running the complete real connectome in WebAssembly, verified end-to-end in a real browser — Stockfish vs StockFly exhibition mode not yet wired up
 - [ ] Live 3D connectome visualization with real activation overlay and move-trace replay (current UI shows real from/to activation bars, not yet a 3D brain view)
-- [x] No-teacher causal-audit control (verified: inference is byte-identical whether Stockfish is reachable on PATH or not) — shuffled-graph, weight-reset, ablation, and output-permutation controls not yet implemented
+- [x] No-teacher causal-audit control (verified: inference is byte-identical whether Stockfish is reachable on PATH or not) — frozen-checkpoint weight-reset comparison is now available via [`tools/audit/weight_reset.py`](tools/audit/README.md); shuffled-graph, ablation, and output-permutation controls remain pending
 - [ ] First measured playing-strength ladder
 - [ ] Pretrained checkpoints published as GitHub Releases (checkpoint format and browser-side loading both work; release publishing automation not yet built)
 - [ ] StockFly Lite (pruned/quantized, for lower-end hardware)
 
-First real, measured training result (`quick` preset, Bio mode, 4,934 Stockfish-labeled positions): 10.58% teacher-move top-1 accuracy, vs. an 8.02% untrained baseline measured on the same simulator path. This is an early, honest number — not a target, a starting point to grow from.
+First real, measured training result (`quick` preset, Bio mode, 4,934 Stockfish-labeled positions): 10.58% teacher-move top-1 accuracy, vs. an 8.02% untrained baseline measured on the same simulator path. These are online training-loop measurements, not a separate frozen-checkpoint or held-out evaluation. The [weight-reset audit](tools/audit/README.md) evaluates a frozen checkpoint against its reset baseline on identical positions; the current suite has some overlap with the training curriculum.
 
 ## License
 

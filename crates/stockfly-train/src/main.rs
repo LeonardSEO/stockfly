@@ -23,6 +23,7 @@ fn main() -> ExitCode {
         None => {
             eprintln!("usage: stockfly-train <command> [args]");
             eprintln!("commands:");
+            eprintln!("  audit-reset --model <checkpoint> --suite <json> [--graph <dir>] [--chess-dir <dir>] [--settle-steps <n>]");
             eprintln!("  infer-untrained --fen <fen|startpos> [--graph <dir>] [--chess-dir <dir>]");
             eprintln!("  train --kind <bio-full|max-full> --preset <smoke|quick|standard|overnight> --curriculum <path> --out <path.sfckpt>");
             return ExitCode::FAILURE;
@@ -30,6 +31,10 @@ fn main() -> ExitCode {
     };
 
     match command.as_str() {
+        "audit-reset" => match stockfly_train::audit::run_cli(args) {
+            Ok(report) => { println!("{report}"); ExitCode::SUCCESS }
+            Err(e) => { eprintln!("audit failed: {e}"); ExitCode::FAILURE }
+        },
         "infer-untrained" => cmd_infer_untrained(args),
         "train" => cmd_train(args),
         other => {
