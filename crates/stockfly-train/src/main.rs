@@ -32,6 +32,14 @@ fn main() -> ExitCode {
     };
 
     match command.as_str() {
+        "ladder-infer" => match stockfly_train::ladder_infer::run_cli(args) {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(e) => { eprintln!("ladder inference failed: {e}"); ExitCode::FAILURE }
+        },
+        "elo-summary" => match stockfly_train::elo::run_cli() {
+            Ok(report) => { println!("{report}"); ExitCode::SUCCESS }
+            Err(e) => { eprintln!("ladder statistics failed: {e}"); ExitCode::FAILURE }
+        },
         "audit-reset" => match stockfly_train::audit::run_cli(args) {
             Ok(report) => { println!("{report}"); ExitCode::SUCCESS }
             Err(e) => { eprintln!("audit failed: {e}"); ExitCode::FAILURE }

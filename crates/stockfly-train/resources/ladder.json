@@ -1,0 +1,30 @@
+{
+  "protocol_version": 1,
+  "budgets": [
+    50,
+    100,
+    250,
+    500,
+    1000,
+    2000,
+    5000
+  ],
+  "opening_pairs": 10,
+  "opening_seed": 20260918,
+  "opening_plies": 8,
+  "max_plies": 600,
+  "timeout_ms": 120000,
+  "hash_mb": 16,
+  "control_seed": 42,
+  "bootstrap_replicates": 10000,
+  "bootstrap_seed": 20260918,
+  "confidence": 0.95,
+  "control_budget": 50,
+  "controls": [
+    "reset",
+    "shuffled",
+    "output-permuted",
+    "brain-bypass"
+  ],
+  "settle_steps": 16
+}
