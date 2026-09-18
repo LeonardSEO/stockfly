@@ -11,6 +11,10 @@ VERSION = "v19.0.0"
 BASE = f"https://github.com/nmrugg/stockfish.js/releases/download/{VERSION}"
 REPO_ROOT = Path(__file__).resolve().parents[2]
 FILES = {
+    "stockfish-js-v19.0.0-source.tar.gz": (
+        "https://codeload.github.com/nmrugg/stockfish.js/tar.gz/refs/tags/v19.0.0",
+        "183b576fa9c8610a9be48c6e5b97506502985e64a771e769a16dbecf2f125d54",
+    ),
     "stockfish-19-lite-single.js": (
         f"{BASE}/stockfish-19-lite-single.js",
         "d3344124ab067fb0b90ee77873bb8e9fbf5fc01bc525fe714b0f942581e889e6",
@@ -62,6 +66,7 @@ def materialize(out: Path, source: Optional[Path], offline: bool) -> None:
     notice = (
         "Stockfish.js 19.0.0 Lite single-thread build\n"
         "Source: https://github.com/nmrugg/stockfish.js/tree/v19.0.0\n"
+        "Corresponding source and build instructions: stockfish-js-v19.0.0-source.tar.gz (build.js and README.md).\n"
         "License: GNU General Public License; see Copying.txt in this directory.\n"
         "The StockFly project is not affiliated with the Stockfish project.\n"
     )

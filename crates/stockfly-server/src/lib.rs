@@ -6,6 +6,8 @@
 //! SharedArrayBuffer instead of erroring, which is why this is enforced
 //! server-side rather than left to be discovered per-deployment.
 
+pub mod install;
+
 use std::fs;
 use std::io::Cursor;
 use std::path::{Component, Path, PathBuf};
@@ -15,6 +17,7 @@ use tiny_http::{Header, Response, Server};
 pub struct ServerConfig {
     pub web_dir: PathBuf,
     pub model_dir: PathBuf,
+    pub data_dir: PathBuf,
     pub bind_addr: String,
 }
 
@@ -39,15 +42,6 @@ fn content_type_for(path: &Path) -> &'static str {
     }
 }
 
-/// True for immutable model/checkpoint blobs, which are content-addressed
-/// by their compiled/trained hash and safe to cache for a year.
-fn is_long_cache_asset(path: &Path) -> bool {
-    matches!(
-        path.extension().and_then(|e| e.to_str()),
-        Some("wasm" | "bin" | "sfckpt")
-    )
-}
-
 /// Resolves a URL path against `root`, rejecting any path that would climb
 /// outside of it (`..` components) -- the server exists to serve exactly
 /// `web_dir`/`model_dir` and nothing else on the filesystem.
@@ -62,7 +56,12 @@ fn resolve_safe_path(root: &Path, url_path: &str) -> Option<PathBuf> {
             _ => return None, // ParentDir, RootDir, Prefix: reject
         }
     }
-    Some(resolved)
+    // Canonical containment also rejects symlinks escaping the configured root.
+    match resolved.canonicalize() {
+        Ok(path) if path.starts_with(root.canonicalize().ok()?) => Some(path),
+        Ok(_) => None,
+        Err(_) => Some(resolved),
+    }
 }
 
 pub fn handle_request(config: &ServerConfig, url: &str) -> Response<Cursor<Vec<u8>>> {
@@ -86,7 +85,17 @@ pub fn handle_request(config: &ServerConfig, url: &str) -> Response<Cursor<Vec<u
         return respond_json(200, &body);
     }
 
-    let Some(path) = resolve_safe_path(&config.web_dir, url_path) else {
+    // Installed assets use fixed roots; the browser cannot select local paths or download URLs.
+    let installed = [
+        ("/vendor/graph/", config.data_dir.join("compiled/malecns-v1")),
+        ("/vendor/brain/", config.data_dir.join("browser")),
+        ("/vendor/chess-maps/", config.data_dir.join("chess-maps")),
+        ("/vendor/models/", config.data_dir.join("browser-models")),
+        ("/vendor/checkpoints/", config.model_dir.clone()),
+    ];
+    let route = installed.iter().find(|(prefix, root)| url_path.starts_with(prefix) && root.exists());
+    let (root, relative) = route.map_or((&config.web_dir, url_path), |(prefix, root)| (root, &url_path[prefix.len()..]));
+    let Some(path) = resolve_safe_path(root, relative) else {
         return respond_plain(403, "forbidden path");
     };
 
@@ -98,11 +107,9 @@ pub fn handle_request(config: &ServerConfig, url: &str) -> Response<Cursor<Vec<u
             for h in coop_coep_headers() {
                 response = response.with_header(h);
             }
-            if is_long_cache_asset(&path) {
-                response = response.with_header(
-                    Header::from_bytes(&b"Cache-Control"[..], &b"public, max-age=31536000, immutable"[..]).unwrap(),
-                );
-            }
+            // All URLs revalidate: graph and catalog filenames are mutable, and hash
+            // spelling alone is not a server-side guarantee of immutable content.
+            response = response.with_header(Header::from_bytes("Cache-Control", "no-cache").unwrap());
             response
         }
         Err(_) => respond_plain(404, "not found"),

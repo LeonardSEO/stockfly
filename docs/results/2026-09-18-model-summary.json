@@ -1,0 +1,147 @@
+{
+  "date": "2026-09-18",
+  "releaseStatus": "experimental",
+  "causalGate": "failed",
+  "lite": "blocked",
+  "models": [
+    {
+      "kind": "bio-full",
+      "auditArtifact": "data/reports/bio-causal-controls-2026-09-18-final.json",
+      "auditSha256": "287b52da25db52426692e988ee45a5f8e51646c8445f1291ee8eb9820c7c6ebb",
+      "calibration": {
+        "decay": 0.8999999761581421,
+        "dt_ms": 1.0,
+        "max_rate": 20.0,
+        "settle_steps": 16,
+        "threshold": 0.5,
+        "weight_scale": 0.5
+      },
+      "summary": {
+        "brain_bypass": {
+          "changed_moves_vs_intact": 162,
+          "top1": 25,
+          "top3": 52
+        },
+        "changed_readouts_vs_intact": {
+          "region_ablation": 116,
+          "shuffled_graph": 116,
+          "weight_reset": 116
+        },
+        "intact": {
+          "changed_moves_vs_intact": 0,
+          "top1": 24,
+          "top3": 51
+        },
+        "output_permutation": {
+          "changed_moves_vs_intact": 102,
+          "top1": 16,
+          "top3": 38
+        },
+        "positions": 175,
+        "region_ablation": {
+          "changed_moves_vs_intact": 97,
+          "top1": 17,
+          "top3": 41
+        },
+        "shuffled_graph": {
+          "changed_moves_vs_intact": 96,
+          "top1": 28,
+          "top3": 50
+        },
+        "weight_reset": {
+          "changed_moves_vs_intact": 17,
+          "top1": 23,
+          "top3": 51
+        }
+      }
+    },
+    {
+      "kind": "max-full",
+      "auditArtifact": "data/reports/max-quick-causal-controls-2026-09-18.json",
+      "auditSha256": "41ef944379de48c95d00378ea8073add54a0be87631d89c247e462ab7213c31e",
+      "calibration": {
+        "decay": 0.8999999761581421,
+        "dt_ms": 1.0,
+        "max_rate": 20.0,
+        "settle_steps": 16,
+        "threshold": 0.5,
+        "weight_scale": 0.5
+      },
+      "summary": {
+        "brain_bypass": {
+          "changed_moves_vs_intact": 160,
+          "top1": 25,
+          "top3": 52
+        },
+        "changed_readouts_vs_intact": {
+          "region_ablation": 116,
+          "shuffled_graph": 116,
+          "weight_reset": 116
+        },
+        "intact": {
+          "changed_moves_vs_intact": 0,
+          "top1": 18,
+          "top3": 46
+        },
+        "output_permutation": {
+          "changed_moves_vs_intact": 98,
+          "top1": 15,
+          "top3": 35
+        },
+        "positions": 175,
+        "region_ablation": {
+          "changed_moves_vs_intact": 81,
+          "top1": 17,
+          "top3": 41
+        },
+        "shuffled_graph": {
+          "changed_moves_vs_intact": 94,
+          "top1": 22,
+          "top3": 47
+        },
+        "weight_reset": {
+          "changed_moves_vs_intact": 84,
+          "top1": 23,
+          "top3": 51
+        }
+      }
+    }
+  ],
+  "maxTraining": {
+    "format_version": 1,
+    "model_kind": "max-full",
+    "graph_neurons_sha256": "cb1bd8c967056afe8e1ae667df9f0d99c59cac365d1660ed61b142caca5c6405",
+    "sensory_map_sha256": "fb5ba4e541b13a34a50973a0760de2b056ed4ac7a2d81425b199c095cdf569b5",
+    "output_map_sha256": "cd6af3b0961c9e096938a9f1802ec32c00d6afb6c9a0125cf72162c64448e5b2",
+    "preset": "quick",
+    "rng_seed": 42,
+    "trials_run": 4934,
+    "teacher_top1_accuracy": 0.101743005,
+    "checkpoint_sha256": "1ac336e9059b9a327a8e17c0d33b29e587c263e58a06b456439ae06dacd293d8",
+    "delta_edges": 9135088,
+    "baseline_trials": 2198,
+    "baseline_online_accuracy_rounded": 0.0892,
+    "baseline_seconds": 450.2,
+    "training_seconds": 1459.0,
+    "curriculum": "data/teacher/quick.jsonl",
+    "metric_limit": "Online training stream accuracy, not held-out strength or Elo.",
+    "training_binary_sha256": "996bcddc724bfac748994b53011b240cf5db60320ba1c0dbaa6ce463bf08d003"
+  },
+  "playingStrength": {
+    "source": "data/reports/ladder-16step-2026-09-18/summary.json",
+    "sha256": "b1c41b9a82aa81943fe9e2fbf270730a277183a5ba168f2f3c827eb6f80bd84d",
+    "games": 440,
+    "intactGames": 280,
+    "controlGames": 160,
+    "allCheckmateLosses": true,
+    "rows": 22,
+    "rowScore": 0,
+    "rowGames": 20,
+    "rowOpeningPairs": 10,
+    "scoreOneSided95Upper": 0.387022756,
+    "localEloDifferenceUpper": -79.883,
+    "finitePointElo": null,
+    "absoluteElo": null,
+    "limitation": "All rows are at the floor; no ranking between models or controls. Rows reuse opening pairs; do not pool confidence."
+  }
+}

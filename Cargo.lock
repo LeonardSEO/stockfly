@@ -1009,6 +1009,7 @@ name = "stockfly-server"
 version = "0.1.0"
 dependencies = [
  "serde_json",
+ "sha2",
  "tempfile",
  "tiny_http",
  "ureq",

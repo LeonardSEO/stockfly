@@ -28,9 +28,11 @@ terms are preserved below.
 - **What we do with it:** Stockfish 19 Lite (single-threaded JS/WASM build)
   is used strictly as (a) a training-time move teacher that generates local
   curriculum examples, and (b) an optional opponent in "Stockfish vs
-  StockFly" exhibition mode. `tools/teacher/fetch-stockfish.mjs` fetches the
-  official release asset and verifies it against a pinned SHA-256 before
-  use. Stockfish binaries are not committed to this repository.
+  StockFly" exhibition mode. `tools/browser/fetch_stockfish.py` prepares the pinned Stockfish.js
+  v19.0.0 browser assets and verifies their SHA-256 values. Portable bundles
+  include the corresponding upstream source archive, its README/build.js
+  build instructions, Copying.txt, AUTHORS and source URLs/hashes. The local
+  StockFly source archive and lockfiles accompany the runtime as well. Stockfish binaries are not committed to this repository.
 - **Isolation:** Stockfish's evaluations, search output, and candidate moves
   are never passed into the StockFly neural simulator at inference time. See
   `docs/superpowers/specs/2026-09-18-stockfly-design.md` for the enforced
@@ -43,8 +45,8 @@ terms are preserved below.
 
 Standard OSS dependencies (Rust crates, npm packages) retain their own
 licenses as declared in `Cargo.toml` / `package.json` and their respective
-lockfiles. No additional attribution obligations beyond standard OSS
-license compliance apply to those dependencies as of this writing.
+lockfiles. Their dependency-specific license and notice obligations still apply; this
+notice is not a legal certification that every distribution obligation is met.
 
 ## Browser chess pieces
 

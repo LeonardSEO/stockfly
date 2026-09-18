@@ -1,0 +1,39 @@
+name: Build portable experimental runtimes
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  package:
+    strategy:
+      matrix:
+        include:
+          - os: macos-14
+            name: stockfly-macos-arm64
+          - os: windows-latest
+            name: stockfly-windows-x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - run: cargo install wasm-pack --version 0.13.1 --locked
+      - run: npm ci
+      - name: Package download-first runtime (no training or model claim)
+        run: python scripts/package-local.py --without-models
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}
+          path: dist/releases/**/${{ matrix.name }}.zip
+          if-no-files-found: error
+# This workflow creates CI artifacts only. It never creates a GitHub Release or
+# uploads release assets. Missing-model download requires a separately approved,
+# published experimental manifest. Windows execution is not locally validated.

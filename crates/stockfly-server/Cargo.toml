@@ -12,8 +12,9 @@ path = "src/main.rs"
 [dependencies]
 tiny_http = "0.12"
 serde_json.workspace = true
-
-[dev-dependencies]
 ureq = "3"
 tempfile = "3"
+sha2 = "0.10"
+
+[dev-dependencies]
 serde_json.workspace = true

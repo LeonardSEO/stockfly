@@ -1,147 +1,125 @@
 # StockFly
 
-**A chess engine with a real insect brain.**
+**An experimental chess engine driven by a simulated fruit-fly connectome.**
 
-StockFly runs a full simulation of the [Janelia MaleCNS v1.0](https://www.janelia.org/project-team/flyem) connectome — every retained neuron and synapse of a fruit fly's (*Drosophila melanogaster*) central nervous system, ~167,000 neurons and ~25.6 million synaptic connections — and lets that simulated brain choose chess moves. No chess-playing neural network sits after the connectome. The move comes out of the same neural activity you watch light up in your browser.
+StockFly simulates the compiled Janelia MaleCNS v1.0 graph: **165,122 neurons and 25,563,197 edges**. Fixed chess inputs drive sensory populations; fixed neural readouts score legal moves. The browser displays sampled activity from that simulation. It runs locally, using WebGPU where available and CPU/WASM fallback when GPU initialization or inference fails.
 
-It runs entirely on your own machine. No cloud, no account, no server round-trip once assets are downloaded.
+**Status, 18 September 2026:** the browser application, two trained Full models, native GPU inference, causal controls, actual match benchmark, and local release automation are implemented. Both models **failed the scientific causal acceptance gate**. All 440 measured games were checkmate losses. This is an experimental runtime, not a validated strong chess engine. No GitHub Release was published during this work.
 
-> **Status: active weekend build, in progress.** The core claim already works end-to-end and is verified: the complete real MaleCNS connectome runs in a browser via WebAssembly, plays a legal chess move against a human, and shows the actual neural activity that produced it. The one-command install below (GitHub Release download) isn't wired up yet — see [Running it today](#running-it-today) for how to run it from source right now. Check the [Roadmap](#roadmap) for the rest. Follow [issues](https://github.com/LeonardSEO/stockfly/issues) and commits for live progress.
+## Models and measured results
 
----
+| Model | Local artifact | Scientific status |
+|---|---|---|
+| **Bio Full** | Quick preset, 4,934 training trials; learning restricted to the biological mask | Causal gate failed |
+| **Max Full** | Quick preset, 4,934 training trials; all synaptic magnitudes eligible for learning | Causal gate failed |
+| **Lite** | No checkpoint; disabled in the selector with a reason | Blocked until the Full causal prerequisite passes |
 
-## What makes this different
+“Full” describes stepping the complete compiled graph. It does not mean the causal gate passed. Topology and signs remain fixed during training; local plasticity changes synaptic magnitudes, without a trainable chess-policy layer after the graph.
 
-There are toy demos that put a fly connectome behind a linear readout trained on top. StockFly is not that. The full biological topology and connection signs are preserved and immutable — training only adjusts synaptic magnitudes through biologically motivated local plasticity, never a trainable chess-policy layer bolted on afterward. Every move ships with a replayable trace (model hash, sensory input hash, neural readouts, selected move) and the release includes causal controls — shuffled-connectome, weight-reset, region-ablation, and no-teacher baselines — so the claim "the fly chose this move" is falsifiable, not just asserted.
+The frozen 175-position audit measured teacher top-1 agreement of **24/175 for Bio**, versus 23 reset, 28 shuffled and 25 brain bypass; **18/175 for Max**, versus 23 reset, 22 shuffled and 25 brain bypass. Those controls do not support a causal acceptance claim. Region-ablation and output-permutation controls also run and are recorded. Teacher agreement is not Elo. Max's 10.17% online training agreement (4,934 trials) is also a different metric; its 8.92% untrained stream baseline covered 2,198 trials.
 
-Two model tiers:
+The completed playing-strength ladder used the real quick checkpoints on Apple M4 Metal at **16 settling steps**, with ten paired openings per condition. Each model played 140 intact games across Stockfish 19 Lite budgets of 50, 100, 250, 500, 1,000, 2,000 and 5,000 nodes/move, plus 80 control games at 50 nodes/move. All **440/440** games ended in checkmate losses; none were excluded or timed out. Every 20-game row is 0 wins, 0 draws, 20 losses. There is **no finite point Elo estimate**. Each row's one-sided 95% score upper bound is 0.387, corresponding to a local Elo-difference upper bound of about −80 against that exact opponent condition. This is not a human or absolute rating, and these floor results cannot rank Bio, Max or their controls. See the [full table and limitations](docs/results/2026-09-18-playing-strength.md) and [model/audit identities](docs/results/2026-09-18-model-summary.json).
 
-| Model | Description |
-|---|---|
-| **StockFly Bio** | Full connectome, plasticity restricted to biologically-motivated learning circuits (mushroom body / dopaminergic). |
-| **StockFly Max** | Full connectome, every synaptic magnitude eligible for local learning. |
-| **StockFly Lite** | A smaller, causally-pruned derivative for lower-end hardware. Never presented as the full brain. |
+## Browser features
 
-## Play modes
+- Human vs Fly and isolated Stockfish 19 Lite vs Fly exhibition modes, with side selection, restart, pause and one-ply controls.
+- Bio/Max selector backed by content-addressed checkpoint identities. Loading failures stay visible; models do not silently switch. Lite remains explicitly unavailable.
+- Local SVG chess pieces, legal moves and promotions, move history, and a game-over dialog that identifies the winner or draw reason and offers another game.
+- Interactive 3D soma point cloud with real source annotations, filters, cell inspection and simulator activation. These are measured soma centroids, not full neuron skeletons. The visible geometry contains 140,024 neurons; all 165,122 participate in Full simulation.
+- Sample-specific from/to/promotion readouts, legal move scores, timeline scrubbing, integrity-checked JSON/binary trace export and import, and explicit CPU replay verification. Imported traces do not change the board.
 
-- **Human vs StockFly** — play the fly yourself in the browser.
-- **Stockfish 19 Lite vs StockFly** — fully automated exhibition match. Watch Stockfish's move, then watch the fly brain's neural activity ripple through the connectome before it answers.
+GPU/CPU equivalence is not established for the complete graph. One recorded Bio position selected the same move on both backends but failed activation and policy tolerances (activation difference 2.62; policy difference 2.40e-5). Deterministic CPU replay passed on that position. Synthetic GPU tests and successful fallback do not establish full-graph numerical parity.
 
-Live visualization per move includes the full 3D connectome, a real-time activation heat/spike overlay sourced directly from the simulator (never a fake animation), region filters, sensory input from the board, from-square/to-square neural output, the chosen move, and a scrub-able timeline to replay the decision.
+## Run a locally prepared portable bundle
 
-## Getting started
+The package contains a native server, built web/WASM files, Stockfish, licenses and corresponding source archives. A normal local build also includes the selected graph, soma metadata and Bio/Max model catalog; it requires no Node, Python, Rust or training to **run**. Download-first CI bundles omit model artifacts and need a separately published experimental model release before they can play.
 
-StockFly ships pretrained checkpoints as GitHub Releases, so **you do not need to train anything** to play. Training locally on your own machine is fully supported for anyone who wants to fine-tune or extend the model — see [Training locally](#training-locally).
+Extract `stockfly-macos-arm64.zip` or `stockfly-windows-x64.zip`, enter its `stockfly` folder, and launch `Start StockFly.command` on macOS or `Start StockFly.cmd` on Windows. The launcher prints and opens `http://127.0.0.1:8765`. These local bundles are unsigned; Windows execution and macOS notarization have not been validated here.
 
-### macOS
+When models are absent, the UI shows an executable download instruction. Run the bundled `Download models.command` / `Download models.cmd`, or use the native CLI:
 
-Requirements: macOS with Apple Silicon recommended (WebGPU via Metal). A recent Chrome, Edge, or Safari Technology Preview.
-
-```bash
-# 1. Download the latest release bundle
-curl -L -o stockfly-macos-arm64.zip \
-  https://github.com/LeonardSEO/stockfly/releases/latest/download/stockfly-macos-arm64.zip
-unzip stockfly-macos-arm64.zip && cd stockfly
-
-# 2. Fetch the pretrained model + compiled connectome (no training required)
-./stockfly-server fetch-models
-
-# 3. Launch — opens your browser at http://localhost:8765
-./stockfly-server
+```sh
+# macOS; Windows uses .\stockfly-server.exe
+./stockfly-server fetch-models                 # newest published release, including prereleases
+./stockfly-server fetch-models --tag v0.1.0-experimental  # pin an existing release
+./stockfly-server --open
 ```
 
-### Windows
+These example tags are not a claim that an asset has already been published. The installer reports total manifest bytes, skips matching files, and stages all downloads before installing hash/size-verified artifacts. Failed downloads preserve existing files. It never invokes training. SHA-256 verifies integrity, **not a publisher signature**. Retry model loading after a successful download. The server binds to loopback by default, serves configured asset roots, sets COOP/COEP, and revalidates mutable assets.
 
-Requirements: Windows 10/11, a GPU with WebGPU support (falls back to WASM automatically if unavailable). A recent Chrome or Edge.
+## Build from source
 
-```powershell
-# 1. Download the latest release bundle
-Invoke-WebRequest -Uri "https://github.com/LeonardSEO/stockfly/releases/latest/download/stockfly-windows-x64.zip" -OutFile stockfly-windows-x64.zip
-Expand-Archive stockfly-windows-x64.zip -DestinationPath stockfly
-cd stockfly
+Build prerequisites: Node 22+, npm, Python 3, Rust/Cargo, the `wasm32-unknown-unknown` target, and `wasm-pack` 0.13.1. Use the lockfiles. The package script supports a macOS arm64 or Windows x64 host:
 
-# 2. Fetch the pretrained model + compiled connectome (no training required)
-.\stockfly-server.exe fetch-models
+```sh
+npm ci
+rustup target add wasm32-unknown-unknown
+cargo install wasm-pack --version 0.13.1 --locked
 
-# 3. Launch — opens your browser at http://localhost:8765
-.\stockfly-server.exe
+# Runtime-only build; no graph/checkpoint/raw download or training:
+./scripts/package-local.sh --without-models
+# Windows PowerShell: .\scripts\package-local.ps1 --without-models
 ```
 
-Nothing leaves your machine. The local server only binds to `127.0.0.1` and sets the cross-origin isolation headers (`COOP`/`COEP`) needed for multithreaded WASM and `SharedArrayBuffer`.
+This single command builds WASM, Vite web assets and the native server in isolated staging under `dist/releases/`, materializes approved runtime files, and produces a ZIP with no external symlinks. It verifies the pinned Stockfish browser binaries and corresponding v19.0.0 source archive, reusing local files when available. It does not change the development catalog or generated development WASM. The GitHub workflow builds CI artifacts only; it neither creates nor uploads GitHub Releases.
 
-## Running it today
+For a bundle with locally prepared models, omit `--without-models`. This requires `data/compiled/malecns-v1`, `data/browser`, the selected `data/browser-models/catalog.json`, and the audit/training/ladder artifacts named in `scripts/package-local.py`. The package preserves the catalog's exact checkpoint selection using copy mode. Current Max is the quick run, not the older smoke checkpoint under `data/checkpoints`.
 
-The Release-download flow above is the target experience; the release-publishing automation isn't built yet. Right now, run it from source (macOS, Apple Silicon recommended):
+For development, an authorized published release can populate a fresh clone without training:
 
-```bash
-git clone https://github.com/LeonardSEO/stockfly && cd stockfly
-
-# 1. Fetch the real Janelia MaleCNS v1.0 data and compile the connectome
-python3.12 -m venv .venv && .venv/bin/pip install -r tools/malecns/requirements.txt
-.venv/bin/python tools/malecns/fetch.py
-.venv/bin/python tools/malecns/compile.py --input data/raw/malecns-v1 --output data/compiled/malecns-v1
-.venv/bin/python tools/malecns/geometry.py --input data/raw/malecns-v1 --compiled data/compiled/malecns-v1
-
-# 2. Build the WASM engine
-rustup target add wasm32-unknown-unknown  # if not already installed
-cargo install wasm-pack
-cd crates/stockfly-wasm && wasm-pack build --target web --release --out-dir ../../apps/web/src/wasm-gen && cd ../..
-
-# 3. Build and serve the web app
-npm install && npm --prefix apps/web run build
-cargo run -p stockfly-server --release -- --web-dir apps/web/dist --model-dir data/checkpoints --open
+```sh
+node tools/models/fetch-release.mjs --tag EXISTING_TAG
+wasm-pack build crates/stockfly-wasm --target web --release --out-dir ../../apps/web/src/wasm-gen
+npm run build --workspace apps/web
+cargo run --release -p stockfly-server -- --open
 ```
 
-This is exactly the path used to verify the app in a real browser during development — see the commit history for details.
+The source wrapper uses the native server installer, compiling it when necessary. A published model release is not yet available as part of this work. To reproduce data from upstream instead, use the existing [MaleCNS compiler](tools/malecns/compile.py), [geometry exporter](tools/malecns/geometry.py), and [browser metadata/model preparation instructions](tools/browser/README.md). Raw MaleCNS data never enters portable or model release artifacts. Fixed chess maps are tracked source files and do not need regeneration for an ordinary build.
+
+## Prepare a model release locally
+
+After building a model-containing package, pass its printed `PORTABLE_ROOT` and an empty output directory:
+
+```sh
+node tools/models/publish-release.mjs --tag v0.1.0-experimental \
+  --input dist/releases/BUILD_DIRECTORY/stockfly --out dist/model-release-v0.1.0-experimental
+```
+
+The default is a local dry run. It writes content-addressed assets and `release-manifest.json` with each file's SHA-256, byte size, model kind, graph identity, training preset and attribution. The manifest retains **experimental / causal failed / Lite blocked** status and includes measured evidence. It refuses uncatalogued checkpoints, mismatched graph/checkpoint identities, symlinks and output reuse. An explicit `--publish` invokes `gh release create --prerelease`; publication is a separate authorized action, and has not been executed. Runtime ZIPs remain separate CI/local artifacts until explicitly uploaded.
+
+Focused verification:
+
+```sh
+cargo test -p stockfly-server
+node --test tools/models/test-fetch-release.mjs
+```
 
 ## Training locally
 
-Training is designed to run entirely on a 16 GB Apple Silicon MacBook (or comparable hardware) — no external GPU or server required. It uses Stockfish 19 Lite as a local curriculum teacher plus biologically-motivated local plasticity rules (not full backpropagation-through-time through the whole recurrent graph), with wall-clock-bounded presets:
+Training is optional. Bio restricts plasticity to its biological mask; Max permits every magnitude to learn. Both preserve graph topology and signs. The quick preset uses 12 settling steps during training; the canonical deployed/ladder calibration uses 16. That difference is recorded rather than presented as interchangeable evidence.
 
-```bash
-cargo run -p stockfly-train --release -- train \
-  --kind max-full --preset standard \
-  --curriculum data/teacher/standard.jsonl \
+```sh
+cargo run --release -p stockfly-train -- train \
+  --kind max-full --preset quick --curriculum data/teacher/quick.jsonl \
   --out data/checkpoints/stockfly-max-full.sfckpt
 ```
 
-| Preset | Wall-clock budget |
-|---|---|
-| `smoke` | ≤ 10 minutes |
-| `quick` | ≤ 30 minutes |
-| `standard` | ≤ 2 hours |
-| `overnight` | ≤ 6 hours |
-
-See [`docs/superpowers/specs/2026-09-18-stockfly-design.md`](docs/superpowers/specs/2026-09-18-stockfly-design.md) for the full training design, and [`docs/superpowers/plans/`](docs/superpowers/plans/) for the implementation plan this project is being built from.
-
-## Architecture
-
-A Rust workspace owns the canonical connectome graph, simulator, plasticity rules, model format, trainer, WASM bindings, and localhost server. Native and browser simulation share `wgpu` compute kernels: macOS uses Metal, Windows uses DX12/Vulkan, and the browser uses WebGPU, with a WASM/CPU fallback everywhere. A TypeScript/Vite/Three.js UI runs StockFly and Stockfish in separate, isolated Web Workers and renders the exact neural state that produced each move.
-
-```text
-localhost
-├── Chess UI
-├── Live MaleCNS brain visualization
-├── StockFly (Full / Lite)
-├── Stockfish 19 Lite (WASM, opponent/teacher only)
-└── Match controller
-```
+Presets target smoke ≤10 minutes, quick ≤30 minutes, standard ≤2 hours and overnight ≤6 hours. See the [training design](docs/superpowers/specs/2026-09-18-stockfly-design.md), [causal audit tooling](tools/audit/README.md), and [paired-match ladder](tools/ladder/README.md).
 
 ## Roadmap
 
-- [x] Official MaleCNS fetch + compile pipeline (real v1.0 data: 165,122 neurons, 25,563,197 edges, verified against the design spec's ~167k/25.6M targets)
-- [x] CPU reference simulator, running the complete real graph — wgpu (Metal/DX12/Vulkan/WebGPU) acceleration not yet implemented
-- [x] Fixed sensory encoding (chess board → real `ol_sensory`/`cb_sensory` populations) and fixed neural move output (real `descending_neuron` population)
-- [x] Stockfish 19 (local, via Homebrew) curriculum teacher + local Bio plasticity training pipeline; Max mode implemented, less tuned so far
-- [x] Local browser app: Human vs StockFly, running the complete real connectome in WebAssembly, verified end-to-end in a real browser — Stockfish vs StockFly exhibition mode not yet wired up
-- [ ] Live 3D connectome visualization with real activation overlay and move-trace replay (current UI shows real from/to activation bars, not yet a 3D brain view)
-- [x] No-teacher causal-audit control (verified: inference is byte-identical whether Stockfish is reachable on PATH or not) — frozen-checkpoint weight-reset comparison is now available via [`tools/audit/weight_reset.py`](tools/audit/README.md); shuffled-graph, ablation, and output-permutation controls remain pending
-- [ ] First measured playing-strength ladder
-- [ ] Pretrained checkpoints published as GitHub Releases (checkpoint format and browser-side loading both work; release publishing automation not yet built)
-- [ ] StockFly Lite (pruned/quantized, for lower-end hardware)
-
-First real, measured training result (`quick` preset, Bio mode, 4,934 Stockfish-labeled positions): 10.58% teacher-move top-1 accuracy, vs. an 8.02% untrained baseline measured on the same simulator path. These are online training-loop measurements, not a separate frozen-checkpoint or held-out evaluation. The [weight-reset audit](tools/audit/README.md) evaluates a frozen checkpoint against its reset baseline on identical positions; the current suite has some overlap with the training curriculum.
+- [x] Official MaleCNS graph compilation, geometry and exact neuron ordering.
+- [x] CPU reference plus persistent native/browser GPU execution and CPU fallback.
+- [x] Fixed sensory/output maps and Bio/Max local plasticity; two trained quick checkpoints.
+- [x] Human and Stockfish exhibition chess UI, model selector and game-over dialog.
+- [x] Real 3D soma activity, annotations, decision readouts and recorded trace replay.
+- [x] Frozen causal controls and actual 440-game playing-strength experiment, with negative evidence retained.
+- [x] Experimental manifest installer/publisher and local portable macOS/Windows packaging automation.
+- [ ] Successful Full causal acceptance and demonstrated playing-strength improvement.
+- [ ] Broad full-graph CPU/GPU numerical parity.
+- [ ] Actual GitHub publication and Windows runtime/browser validation.
+- [ ] StockFly Lite; blocked by the failed Full causal prerequisite.
 
 ## License
 
-StockFly is distributed under [GPL-3.0-or-later](LICENSE), a consequence of depending on Stockfish (GPLv3). See [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) for full attribution of the Janelia MaleCNS connectome (CC-BY) and Stockfish.
+StockFly is [GPL-3.0-or-later](LICENSE). MaleCNS-derived assets retain Janelia/FlyEM CC-BY attribution. Bundled Stockfish.js v19.0.0 preserves GPL text, authors, pinned source/binary identities and its corresponding source archive/build instructions. Chess-piece provenance is included. See [third-party notices](THIRD_PARTY_NOTICES.md); these preserved materials are not a legal certification of distribution compliance.

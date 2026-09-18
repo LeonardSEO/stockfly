@@ -41,7 +41,7 @@ The generated `data/vendor/stockfish-19-lite` directory contains the exact sourc
 
 ## Trained model catalog
 
-Prepare the two approved Full checkpoints for local browser development:
+Prepare two selected experimental Full checkpoints for local browser development (both current causal gates failed):
 
 ```bash
 npm run assets:models --workspace apps/web
