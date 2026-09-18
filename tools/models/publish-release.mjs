@@ -6,6 +6,7 @@ import { mkdir, readdir, readFile, copyFile, writeFile, realpath, stat } from 'n
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
+import { validateReleaseManifest } from './validate-release-manifest.mjs';
 const { values } = parseArgs({ options: { tag: { type: 'string' }, input: { type: 'string' }, out: { type: 'string' }, publish: { type: 'boolean', default: false } } });
 if (!values.tag || !/^[A-Za-z0-9._-]+$/.test(values.tag) || !values.input || !values.out) throw Error('Usage: publish-release.mjs --tag TAG --input PORTABLE_ROOT --out EMPTY_OUTPUT [--publish]');
 const input = await realpath(values.input);
@@ -50,6 +51,8 @@ const manifest = {
   models: models.map(model => ({ kind: model.expectedKind, trainingPreset: model.trainingPreset, trialsRun: model.trialsRun, checkpointSha256: model.checkpointSha256, graphNeuronsSha256: graphHash, causalAuditStatus: 'failed' })),
   files: files.sort((a, b) => a.path.localeCompare(b.path)),
 };
+const schema = JSON.parse(await readFile(new URL('./release-manifest.schema.json', import.meta.url), 'utf8'));
+validateReleaseManifest(manifest, schema);
 await writeFile(path.join(out, 'release-manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
 console.log(`Prepared ${files.length} files, ${files.reduce((sum, file) => sum + file.size, 0)} bytes. ${path.join(out, 'release-manifest.json')}`);
 console.log('EXPERIMENTAL: Bio and Max failed their causal gates; Lite blocked. Nothing uploaded unless --publish was explicitly supplied.');

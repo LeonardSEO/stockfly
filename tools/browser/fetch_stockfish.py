@@ -3,6 +3,8 @@
 import argparse
 import hashlib
 import json
+import os
+import tempfile
 from pathlib import Path
 from typing import Optional
 from urllib.request import urlopen
@@ -38,6 +40,20 @@ def digest(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+def atomic_write(destination: Path, data: bytes) -> None:
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(dir=destination.parent, prefix=f".{destination.name}.", suffix=".tmp", delete=False) as handle:
+            temporary = Path(handle.name)
+            handle.write(data)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, destination)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
+
 def materialize(out: Path, source: Optional[Path], offline: bool) -> None:
     out.mkdir(parents=True, exist_ok=True)
     sources = []
@@ -59,7 +75,7 @@ def materialize(out: Path, source: Optional[Path], offline: bool) -> None:
         actual = digest(data)
         if actual != expected:
             raise ValueError(f"SHA-256 mismatch for {name}: expected {expected}, got {actual}")
-        destination.write_bytes(data)
+        atomic_write(destination, data)
         sources.append({"file": name, "url": url, "sha256": expected})
         print(f"{name}: {origin} ({actual})")
 
@@ -70,8 +86,8 @@ def materialize(out: Path, source: Optional[Path], offline: bool) -> None:
         "License: GNU General Public License; see Copying.txt in this directory.\n"
         "The StockFly project is not affiliated with the Stockfish project.\n"
     )
-    (out / "NOTICE.txt").write_text(notice)
-    (out / "sources.json").write_text(json.dumps({"version": VERSION, "files": sources}, indent=2) + "\n")
+    atomic_write(out / "NOTICE.txt", notice.encode("utf-8"))
+    atomic_write(out / "sources.json", (json.dumps({"version": VERSION, "files": sources}, indent=2) + "\n").encode("utf-8"))
 
 
 if __name__ == "__main__":
