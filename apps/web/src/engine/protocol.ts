@@ -1,14 +1,6 @@
 import type { ActivationFrame } from "../brain/activation";
 import type { MoveTrace } from "../traces/MoveTrace";
 
-export function modelTruthBadge(modelKind: string): string {
-  if (modelKind === "bio-full") return "BIO FULL · complete MaleCNS";
-  if (modelKind === "max-full") return "MAX FULL · complete MaleCNS";
-  if (modelKind === "lite") return "LITE · pruned MaleCNS subset";
-  if (modelKind === "untrained baseline") return "UNTRAINED · complete MaleCNS baseline";
-  throw new Error(`Unsupported model kind: ${modelKind}`);
-}
-
 export interface ModelManifestInfo {
   neuronCount: number;
   edgeCount: number;
@@ -34,6 +26,7 @@ export interface TraceVerification {
   actualMove: string;
   maxActivationDifference: number;
   activationTolerance: number;
+  failedActivationFrameCount: number;
   maxDecisionRateDifference: number;
   decisionRateTolerance: number;
   cpuReplayPassed: boolean;
@@ -52,7 +45,8 @@ export type StockFlyRequest =
 export type StockFlyResponse =
   | { type: "loaded"; generation: number; manifest: ModelManifestInfo }
   | { type: "error"; generation: number; traceId?: string; verificationId?: string; message: string }
-  | { type: "frame"; generation: number; traceId: string; frame: ActivationFrame }
+  | { type: "frame-restart"; generation: number; traceId: string; attempt: number; backend: string }
+  | { type: "frame"; generation: number; traceId: string; attempt: number; frame: ActivationFrame }
   | { type: "verification"; generation: number; verificationId: string; result: TraceVerification }
   | {
       type: "decision";

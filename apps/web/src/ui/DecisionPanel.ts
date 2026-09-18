@@ -71,7 +71,7 @@ export class DecisionPanel {
         const jsonFile = files.find(file => file.name.endsWith('.json'));
         const binaryFile = files.find(file => file.name.endsWith('.bin'));
         if (!jsonFile || !binaryFile || files.length !== 2) throw new Error('Choose one trace JSON file and its activation .bin file.');
-        handlers.onImport(importMoveTrace(await jsonFile.text(), new Uint8Array(await binaryFile.arrayBuffer())));
+        handlers.onImport(await importMoveTrace(await jsonFile.text(), new Uint8Array(await binaryFile.arrayBuffer())));
       } catch (error) {
         this.verification.className = 'trace-verification failed';
         this.verification.textContent = error instanceof Error ? error.message : String(error);
@@ -133,7 +133,7 @@ export class DecisionPanel {
     this.verifyButton.disabled = false;
     this.verification.className = `trace-verification ${result.passed ? 'passed' : 'failed'}`;
     const recordedLabel = result.mode === 'cpu-replay' ? 'Recorded CPU trace' : 'Recorded GPU trace vs CPU reference';
-    this.verification.textContent = `CPU reproducibility ${result.cpuReplayPassed ? 'passed' : 'failed'} · repeated-run activation Δ ${result.maxCpuReplayActivationDifference.toExponential(2)} · policy Δ ${result.maxCpuReplayDecisionRateDifference.toExponential(2)} (tol ${result.decisionRateTolerance.toExponential(2)}). ${recordedLabel} ${result.recordedTraceMatches ? 'matched' : 'did not match'} · move ${result.actualMove} · activation Δ ${result.maxActivationDifference.toExponential(2)} (quantized tol ${result.activationTolerance.toExponential(2)}) · policy Δ ${result.maxDecisionRateDifference.toExponential(2)}. ${result.note}`;
+    this.verification.textContent = `CPU reproducibility ${result.cpuReplayPassed ? 'passed' : 'failed'} · repeated-run activation Δ ${result.maxCpuReplayActivationDifference.toExponential(2)} · policy Δ ${result.maxCpuReplayDecisionRateDifference.toExponential(2)} (tol ${result.decisionRateTolerance.toExponential(2)}). ${recordedLabel} ${result.recordedTraceMatches ? 'matched' : 'did not match'} · move ${result.actualMove} · activation Δ ${result.maxActivationDifference.toExponential(2)} · ${result.failedActivationFrameCount} frame(s) outside their own f32/quantized tolerance (largest tolerance ${result.activationTolerance.toExponential(2)}) · policy Δ ${result.maxDecisionRateDifference.toExponential(2)}. ${result.note}`;
   }
 
   showError(message: string): void {

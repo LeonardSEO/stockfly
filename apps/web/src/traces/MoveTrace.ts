@@ -1,9 +1,10 @@
 import type { ActivationFrame, DecisionReadout } from '../brain/activation';
+import { modelTruthBadge } from '../engine/modelTruth.ts';
 
 export const MOVE_TRACE_FORMAT = 'stockfly-move-trace';
-export const MOVE_TRACE_VERSION = 1;
+export const MOVE_TRACE_VERSION = 2;
 const BINARY_MAGIC = 'SFTB';
-const BINARY_VERSION = 1;
+const BINARY_VERSION = 2;
 const BINARY_HEADER_BYTES = 16;
 const FRAME_HEADER_BYTES = 12;
 
@@ -44,6 +45,7 @@ interface MoveTraceJson extends Omit<MoveTrace, 'frames'> {
     formatVersion: typeof BINARY_VERSION;
     neuronCount: number;
     frameCount: number;
+    sha256: string;
   };
   frames: JsonFrame[];
 }
@@ -88,6 +90,11 @@ function validateHash(value: unknown, label: string): asserts value is string {
   assert(typeof value === 'string' && /^[a-f0-9]{64}$/.test(value), `${label} must be a SHA-256 hash`);
 }
 
+async function sha256(bytes: Uint8Array): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', bytes.slice().buffer);
+  return [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
 function validateTraceJson(value: unknown): asserts value is MoveTraceJson {
   assert(isRecord(value), 'JSON root must be an object');
   assert(value.format === MOVE_TRACE_FORMAT, `format must be ${MOVE_TRACE_FORMAT}`);
@@ -98,9 +105,15 @@ function validateTraceJson(value: unknown): asserts value is MoveTraceJson {
   for (const field of ['inputFen', 'backend', 'modelKind', 'modelBadge'] as const) {
     assert(typeof provenance[field] === 'string' && provenance[field].length > 0, `provenance.${field} is required`);
   }
+  let expectedBadge: string;
+  try { expectedBadge = modelTruthBadge(provenance.modelKind as string); }
+  catch { throw new Error(`Invalid move trace: provenance.modelKind is unsupported`); }
+  assert(provenance.modelBadge === expectedBadge, 'provenance.modelBadge does not match provenance.modelKind');
   assert(typeof provenance.adapter === 'string', 'provenance.adapter must be a string');
   assert(provenance.checkpointSha256 === null || typeof provenance.checkpointSha256 === 'string', 'provenance.checkpointSha256 is invalid');
   if (provenance.checkpointSha256 !== null) validateHash(provenance.checkpointSha256, 'provenance.checkpointSha256');
+  assert(provenance.modelKind === 'untrained baseline' ? provenance.checkpointSha256 === null : provenance.checkpointSha256 !== null,
+    'provenance checkpoint identity does not match modelKind');
   validateHash(provenance.graphManifestSha256, 'provenance.graphManifestSha256');
   validateHash(provenance.graphNeuronsSha256, 'provenance.graphNeuronsSha256');
   validateHash(provenance.sensoryMapSha256, 'provenance.sensoryMapSha256');
@@ -109,13 +122,18 @@ function validateTraceJson(value: unknown): asserts value is MoveTraceJson {
   assert(value.activationBinary.formatVersion === BINARY_VERSION, `unsupported binary version ${String(value.activationBinary.formatVersion)}`);
   assert(Number.isInteger(value.activationBinary.neuronCount) && (value.activationBinary.neuronCount as number) > 0, 'neuronCount must be positive');
   assert(Number.isInteger(value.activationBinary.frameCount) && (value.activationBinary.frameCount as number) > 0, 'frameCount must be positive');
+  validateHash(value.activationBinary.sha256, 'activationBinary.sha256');
   assert(Array.isArray(value.frames) && value.frames.length === value.activationBinary.frameCount, 'frame count does not match metadata');
+  let previousStep = 0;
   value.frames.forEach((frame, index) => {
     assert(isRecord(frame), `frames[${index}] must be an object`);
     for (const field of ['step', 'tMs', 'elapsedMs'] as const) finiteNumber(frame[field], `frames[${index}].${field}`);
     assert(Number.isInteger(frame.step) && (frame.step as number) > 0, `frames[${index}].step must be a positive integer`);
+    assert((frame.step as number) > previousStep, 'frame steps must be strictly increasing');
+    previousStep = frame.step as number;
     assert((frame.tMs as number) >= 0 && (frame.elapsedMs as number) >= 0, `frames[${index}] times must not be negative`);
     assert(typeof frame.backend === 'string' && frame.backend.length > 0, `frames[${index}].backend is required`);
+    assert(frame.backend === provenance.backend, `frames[${index}].backend does not match provenance.backend`);
     assert(frame.activationEncoding === 'u8' || frame.activationEncoding === 'f32', `frames[${index}].activationEncoding is invalid`);
     if (frame.activationEncoding === 'u8') {
       finiteNumber(frame.maxRate, `frames[${index}].maxRate`);
@@ -150,7 +168,11 @@ function neuronCount(trace: MoveTrace): number {
   const first = trace.frames[0].neuronRates;
   const count = first instanceof Float32Array ? first.length : first.values.length;
   assert(count > 0, 'activation frames must contain neurons');
+  let previousStep = 0;
   for (const frame of trace.frames) {
+    assert(frame.step > previousStep, 'frame steps must be strictly increasing');
+    assert(frame.backend === trace.provenance.backend, 'frame backend does not match provenance backend');
+    previousStep = frame.step;
     const rates = frame.neuronRates;
     assert((rates instanceof Float32Array ? rates.length : rates.values.length) === count, 'activation frame neuron counts differ');
     validateDecision(frame.decision, `frame ${frame.step} decision`);
@@ -158,7 +180,7 @@ function neuronCount(trace: MoveTrace): number {
   return count;
 }
 
-export function exportMoveTrace(trace: MoveTrace): ExportedMoveTrace {
+export async function exportMoveTrace(trace: MoveTrace): Promise<ExportedMoveTrace> {
   const count = neuronCount(trace);
   const frameSizes = trace.frames.map(frame => frame.neuronRates instanceof Float32Array ? frame.neuronRates.byteLength : frame.neuronRates.values.byteLength);
   const totalBytes = BINARY_HEADER_BYTES + frameSizes.reduce((sum, size) => sum + FRAME_HEADER_BYTES + size, 0);
@@ -191,17 +213,23 @@ export function exportMoveTrace(trace: MoveTrace): ExportedMoveTrace {
   const document: MoveTraceJson = {
     ...trace,
     frames,
-    activationBinary: { formatVersion: BINARY_VERSION, neuronCount: count, frameCount: frames.length },
+    activationBinary: {
+      formatVersion: BINARY_VERSION,
+      neuronCount: count,
+      frameCount: frames.length,
+      sha256: await sha256(binary),
+    },
   };
   return { json: `${JSON.stringify(document, null, 2)}\n`, binary };
 }
 
-export function importMoveTrace(json: string, binaryInput: ArrayBuffer | Uint8Array): MoveTrace {
+export async function importMoveTrace(json: string, binaryInput: ArrayBuffer | Uint8Array): Promise<MoveTrace> {
   let parsed: unknown;
   try { parsed = JSON.parse(json); }
   catch (error) { throw new Error(`Invalid move trace: JSON parse failed: ${error instanceof Error ? error.message : String(error)}`); }
   validateTraceJson(parsed);
   const binary = binaryInput instanceof Uint8Array ? binaryInput : new Uint8Array(binaryInput);
+  assert(await sha256(binary) === parsed.activationBinary.sha256, 'activation binary SHA-256 does not match JSON');
   assert(binary.byteLength >= BINARY_HEADER_BYTES, 'binary payload is truncated');
   const view = new DataView(binary.buffer, binary.byteOffset, binary.byteLength);
   const magic = String.fromCharCode(...binary.subarray(0, 4));

@@ -1,9 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import type { ActivationFrame } from '../brain/activation.ts';
-import { exportMoveTrace, importMoveTrace, type MoveTrace } from './MoveTrace.ts';
+import { FrameStreamTracker } from '../engine/frameStream.ts';
+import { compareRecordedActivation } from '../engine/traceVerification.ts';
+import { exportMoveTrace, importMoveTrace, MOVE_TRACE_VERSION, type MoveTrace } from './MoveTrace.ts';
 import { TraceTimeline } from './TraceTimeline.ts';
-import { modelTruthBadge } from '../engine/protocol.ts';
+import { modelTruthBadge } from '../engine/modelTruth.ts';
 
 const hash = (digit: string) => digit.repeat(64);
 const decision = (selectedMove: string, seed: number) => ({
@@ -20,7 +22,7 @@ const frame = (step: number, selectedMove: string, seed: number, neuronRates: Ac
   decision: decision(selectedMove, seed),
 });
 const trace: MoveTrace = {
-  format: 'stockfly-move-trace', version: 1, traceId: '2:7',
+  format: 'stockfly-move-trace', version: MOVE_TRACE_VERSION, traceId: '2:7',
   provenance: {
     inputFen: '8/8/8/8/8/8/k6K/8 b - - 0 1', backend: 'cpu-wasm', adapter: '',
     modelKind: 'bio-full', modelBadge: 'BIO FULL · complete MaleCNS', checkpointSha256: hash('a'),
@@ -33,9 +35,16 @@ const trace: MoveTrace = {
   finalDecision: { ...decision('a2a4', 2), settleSteps: 2 },
 };
 
-test('versioned JSON and binary activation payload round-trip move, hashes and both encodings', () => {
-  const exported = exportMoveTrace(trace);
-  const restored = importMoveTrace(exported.json, exported.binary);
+async function jsonForBinary(json: string, binary: Uint8Array): Promise<string> {
+  const parsed = JSON.parse(json);
+  const digest = await crypto.subtle.digest('SHA-256', binary.slice().buffer);
+  parsed.activationBinary.sha256 = [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, '0')).join('');
+  return JSON.stringify(parsed);
+}
+
+test('versioned JSON and binary activation payload round-trip move, hashes and both encodings', async () => {
+  const exported = await exportMoveTrace(trace);
+  const restored = await importMoveTrace(exported.json, exported.binary);
   assert.equal(restored.finalDecision.selectedMove, 'a2a4');
   assert.deepEqual(restored.provenance, trace.provenance);
   assert.deepEqual(restored.frames[0].decision, trace.frames[0].decision);
@@ -43,17 +52,18 @@ test('versioned JSON and binary activation payload round-trip move, hashes and b
   assert.deepEqual([...restored.frames[1].neuronRates as Float32Array], [0, 1.25, 9.5]);
 });
 
-test('binary import rejects corruption and mismatched frame data', () => {
-  const exported = exportMoveTrace(trace);
+test('binary import rejects corruption and mismatched frame data', async () => {
+  const exported = await exportMoveTrace(trace);
   const badMagic = exported.binary.slice(); badMagic[0] = 0;
-  assert.throws(() => importMoveTrace(exported.json, badMagic), /magic/);
-  assert.throws(() => importMoveTrace(exported.json, exported.binary.slice(0, -1)), /truncated/);
+  await assert.rejects(async () => importMoveTrace(await jsonForBinary(exported.json, badMagic), badMagic), /magic/);
+  const truncated = exported.binary.slice(0, -1);
+  await assert.rejects(async () => importMoveTrace(await jsonForBinary(exported.json, truncated), truncated), /truncated/);
   const trailing = new Uint8Array(exported.binary.length + 1); trailing.set(exported.binary);
-  assert.throws(() => importMoveTrace(exported.json, trailing), /trailing/);
+  await assert.rejects(async () => importMoveTrace(await jsonForBinary(exported.json, trailing), trailing), /trailing/);
   const invalidMetadata = JSON.parse(exported.json); invalidMetadata.frames[0].topNeurons = null;
-  assert.throws(() => importMoveTrace(JSON.stringify(invalidMetadata), exported.binary), /topNeurons/);
+  await assert.rejects(() => importMoveTrace(JSON.stringify(invalidMetadata), exported.binary), /topNeurons/);
   const mismatchedDecision = JSON.parse(exported.json); mismatchedDecision.finalDecision.selectedMove = 'h2h4';
-  assert.throws(() => importMoveTrace(JSON.stringify(mismatchedDecision), exported.binary), /final recorded move/);
+  await assert.rejects(() => importMoveTrace(JSON.stringify(mismatchedDecision), exported.binary), /final recorded move/);
 });
 
 test('timeline scrubbing returns each recorded step readout instead of repeating the final decision', () => {
@@ -71,4 +81,58 @@ test('model truth badges distinguish complete, pruned and untrained models', () 
   assert.equal(modelTruthBadge('lite'), 'LITE · pruned MaleCNS subset');
   assert.equal(modelTruthBadge('untrained baseline'), 'UNTRAINED · complete MaleCNS baseline');
   assert.throws(() => modelTruthBadge('mystery'), /Unsupported/);
+});
+
+test('import rejects forged model kinds and badges before they reach the decision panel', async () => {
+  const exported = await exportMoveTrace(trace);
+  const forgedBadge = JSON.parse(exported.json);
+  forgedBadge.provenance.modelBadge = 'BIO FULL · definitely stronger';
+  await assert.rejects(() => importMoveTrace(JSON.stringify(forgedBadge), exported.binary), /modelBadge does not match/);
+  const unknownKind = JSON.parse(exported.json);
+  unknownKind.provenance.modelKind = 'super-full';
+  unknownKind.provenance.modelBadge = 'BIO FULL · complete MaleCNS';
+  await assert.rejects(() => importMoveTrace(JSON.stringify(unknownKind), exported.binary), /modelKind is unsupported/);
+});
+
+test('import rejects mixed backends, non-monotonic steps and a same-shape swapped binary', async () => {
+  const exported = await exportMoveTrace(trace);
+  const mixedBackend = JSON.parse(exported.json);
+  mixedBackend.frames[0].backend = 'browser-webgpu';
+  await assert.rejects(() => importMoveTrace(JSON.stringify(mixedBackend), exported.binary), /backend does not match/);
+  const duplicateStep = JSON.parse(exported.json);
+  duplicateStep.frames[1].step = duplicateStep.frames[0].step;
+  await assert.rejects(() => importMoveTrace(JSON.stringify(duplicateStep), exported.binary), /strictly increasing/);
+
+  const other: MoveTrace = {
+    ...trace,
+    traceId: 'other',
+    frames: trace.frames.map((item, index) => ({
+      ...item,
+      neuronRates: index === 0
+        ? { values: new Uint8Array([255, 13, 0]), maxRate: 20 }
+        : new Float32Array([9.5, 1.25, 0]),
+    })),
+  };
+  const otherExport = await exportMoveTrace(other);
+  await assert.rejects(() => importMoveTrace(exported.json, otherExport.binary), /SHA-256 does not match/);
+});
+
+test('backend fallback restart discards samples from the abandoned attempt', () => {
+  const tracker = new FrameStreamTracker();
+  let retained: string[] = [];
+  for (const [step, backend] of [[1, 'browser-webgpu'], [2, 'browser-webgpu'], [1, 'cpu-wasm'], [2, 'cpu-wasm']] as const) {
+    const observed = tracker.observe({ step, backend });
+    if (observed.restarted) retained = [];
+    retained.push(`${observed.attempt}:${backend}:${step}`);
+  }
+  assert.deepEqual(retained, ['1:cpu-wasm:1', '1:cpu-wasm:2']);
+});
+
+test('full-precision activation failure is not masked by a quantized frame tolerance', () => {
+  const full = compareRecordedActivation(new Float32Array([0]), new Float32Array([0.001]));
+  const quantized = compareRecordedActivation({ values: new Uint8Array([0]), maxRate: 20 }, new Float32Array([0.02]));
+  assert.equal(full.matches, false);
+  assert.ok(full.maxDifference < quantized.tolerance);
+  assert.equal(quantized.matches, true);
+  assert.equal([full, quantized].every(result => result.matches), false);
 });

@@ -4,7 +4,7 @@ import { BrainView } from './brain/BrainView';
 import type { ActivationFrame } from './brain/activation';
 import { InferenceLifecycle } from './engine/lifecycle';
 import type { ModelManifestInfo, StockFlyRequest, StockFlyResponse } from './engine/protocol';
-import { exportMoveTrace, type MoveTrace } from './traces/MoveTrace';
+import { exportMoveTrace, MOVE_TRACE_VERSION, type MoveTrace } from './traces/MoveTrace';
 import { TraceTimeline } from './traces/TraceTimeline';
 import { DecisionPanel } from './ui/DecisionPanel';
 
@@ -18,6 +18,7 @@ let lastMove: string[] = [];
 let lastTrace: MoveTrace | null = null;
 let timeline: TraceTimeline | null = null;
 let pendingFrames: ActivationFrame[] = [];
+let pendingAttempt = 0;
 let pendingFen = '';
 let replayTimer: number | null = null;
 let verificationSerial = 0;
@@ -108,12 +109,16 @@ function download(name: string, contents: BlobPart, type: string): void {
   window.setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
-function exportTrace(kind: 'json' | 'binary'): void {
+async function exportTrace(kind: 'json' | 'binary'): Promise<void> {
   if (!lastTrace) return;
-  const exported = exportMoveTrace(lastTrace);
-  const base = `stockfly-${lastTrace.traceId.replace(/[^a-z0-9_-]/gi, '-')}`;
-  if (kind === 'json') download(`${base}.json`, exported.json, 'application/json');
-  else download(`${base}.activations.bin`, exported.binary.slice().buffer, 'application/octet-stream');
+  try {
+    const exported = await exportMoveTrace(lastTrace);
+    const base = `stockfly-${lastTrace.traceId.replace(/[^a-z0-9_-]/gi, '-')}`;
+    if (kind === 'json') download(`${base}.json`, exported.json, 'application/json');
+    else download(`${base}.activations.bin`, exported.binary.slice().buffer, 'application/octet-stream');
+  } catch (error) {
+    decisionPanel.showError(`Trace export failed: ${error instanceof Error ? error.message : String(error)}`);
+  }
 }
 
 function useTrace(trace: MoveTrace, source: 'live' | 'imported'): void {
@@ -145,7 +150,7 @@ function askFlyToMove(): void {
   stopReplay();
   brain.reset();
   decisionPanel.reset();
-  lastTrace = null; timeline = null; pendingFrames = [];
+  lastTrace = null; timeline = null; pendingFrames = []; pendingAttempt = 0;
   statusText = 'StockFly is thinking. Watching actual neural activity…';
   const identity = lifecycle.begin();
   pendingFen = game.fen();
@@ -184,7 +189,7 @@ function resetGame(): void {
   const generation = lifecycle.reset();
   post({ type: 'reset', generation });
   flyThinking = false; moveFailed = false; game.reset();
-  selectedSquare = null; legalTargets = []; lastMove = []; lastTrace = null; timeline = null; pendingFrames = []; pendingPromotion = null;
+  selectedSquare = null; legalTargets = []; lastMove = []; lastTrace = null; timeline = null; pendingFrames = []; pendingAttempt = 0; pendingPromotion = null;
   activeVerificationId = null; stopReplay();
   app.querySelector<HTMLElement>('.promotion')!.hidden = true;
   brain.reset(); decisionPanel.reset(); statusText = 'New game. Your move.';
@@ -214,8 +219,16 @@ worker.addEventListener('message', (event: MessageEvent<StockFlyResponse>) => {
   if (msg.type === 'loaded') {
     modelInfo = msg.manifest; loadFailed = false;
     statusText = 'Your move. Select a piece to begin.'; render();
+  } else if (msg.type === 'frame-restart') {
+    if (!lifecycle.accepts(msg) || msg.attempt <= pendingAttempt) return;
+    pendingAttempt = msg.attempt;
+    pendingFrames = [];
+    brain.reset(); decisionPanel.reset();
+    statusText = `Simulation restarted on ${msg.backend}; earlier backend samples were discarded.`;
+    render();
   } else if (msg.type === 'frame') {
     if (!lifecycle.accepts(msg)) return;
+    if (msg.attempt !== pendingAttempt) return;
     pendingFrames.push(msg.frame);
     brain.update(msg.frame);
     decisionPanel.showLiveFrame(msg.frame);
@@ -226,7 +239,7 @@ worker.addEventListener('message', (event: MessageEvent<StockFlyResponse>) => {
     requestAnimationFrame(() => requestAnimationFrame(() => {
       if (!lifecycle.accepts(msg)) return;
       const trace: MoveTrace = {
-        format: 'stockfly-move-trace', version: 1, traceId: msg.traceId,
+        format: 'stockfly-move-trace', version: MOVE_TRACE_VERSION, traceId: msg.traceId,
         provenance: {
           inputFen: pendingFen, backend: msg.backend, adapter: msg.adapter,
           ...(msg.fallbackReason ? { fallbackReason: msg.fallbackReason } : {}),
