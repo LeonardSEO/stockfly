@@ -61,6 +61,8 @@ fn excitation_reaches_neuron_2_and_inhibition_suppresses_neuron_3() {
         settle_steps: 2,
         threshold: 0.5,
         decay: 0.0, // no membrane leak/history: isolates the effect to each step's inputs
+        weight_scale: 1.0,
+        max_rate: 100.0,
     };
     let mut sim = CpuSimulator::new(&connectome, config);
 

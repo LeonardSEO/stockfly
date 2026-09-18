@@ -44,6 +44,25 @@ pub struct SimConfig {
     pub settle_steps: u32,
     pub threshold: f32,
     pub decay: f32,
+    /// Uniform multiplier applied to every compiled edge magnitude before
+    /// simulation (sign untouched). The compiled base magnitude is the raw
+    /// MaleCNS synapse count (median 2, up to 2591), which is not on a
+    /// scale a threshold=0.5 LIF-style unit expects -- without rescaling,
+    /// per-step input to most neurons is far too small for activity to
+    /// reach output populations within a training-affordable number of
+    /// settle steps (empirically verified: even 16 settle steps left the
+    /// descending-neuron output populations at exactly zero rate). This is
+    /// a documented simulation-scale choice, not a change to which
+    /// connections exist or their biological sign.
+    pub weight_scale: f32,
+    /// Hard per-step cap on `rate`. The compiled graph is strongly
+    /// recurrent (~155 average in-degree across 165k neurons); without a
+    /// saturating nonlinearity, the linear LIF-hybrid update can enter
+    /// unbounded positive feedback and rates diverge to infinity within a
+    /// handful of steps (empirically observed). This cap is a documented
+    /// simulation-stability simplification, applied uniformly and not a
+    /// per-neuron/per-region choice.
+    pub max_rate: f32,
 }
 
 impl Default for SimConfig {
@@ -52,7 +71,9 @@ impl Default for SimConfig {
             dt_ms: 1.0,
             settle_steps: 16,
             threshold: 0.5,
+            weight_scale: 0.5, // 1 / median(|base_magnitude|) over the real compiled malecns-v1 graph
             decay: 0.9,
+            max_rate: 20.0,
         }
     }
 }

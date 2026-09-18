@@ -13,3 +13,6 @@ path = "src/main.rs"
 stockfly-connectome = { path = "../stockfly-connectome" }
 stockfly-sim = { path = "../stockfly-sim" }
 stockfly-chess = { path = "../stockfly-chess" }
+stockfly-plasticity = { path = "../stockfly-plasticity" }
+serde.workspace = true
+serde_json.workspace = true

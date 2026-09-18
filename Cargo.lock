@@ -280,6 +280,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "stockfly-plasticity"
+version = "0.1.0"
+
+[[package]]
 name = "stockfly-sim"
 version = "0.1.0"
 dependencies = [
@@ -292,8 +296,11 @@ dependencies = [
 name = "stockfly-train"
 version = "0.1.0"
 dependencies = [
+ "serde",
+ "serde_json",
  "stockfly-chess",
  "stockfly-connectome",
+ "stockfly-plasticity",
  "stockfly-sim",
 ]
 

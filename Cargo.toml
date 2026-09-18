@@ -6,6 +6,7 @@ members = [
     "crates/stockfly-sim",
     "crates/stockfly-chess",
     "crates/stockfly-train",
+    "crates/stockfly-plasticity",
 ]
 
 [workspace.package]
