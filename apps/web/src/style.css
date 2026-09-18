@@ -1,0 +1,139 @@
+:root {
+  color-scheme: dark;
+  --bg: #0e1116;
+  --panel: #161b22;
+  --border: #2a3140;
+  --accent: #7ee787;
+  --text: #e6edf3;
+  --muted: #8b949e;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+}
+
+#app {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 24px 16px 64px;
+}
+
+h1 {
+  font-size: 1.4rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.badge {
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.layout {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(8, 56px);
+  grid-template-rows: repeat(8, 56px);
+  border: 2px solid var(--border);
+  width: fit-content;
+}
+
+.square {
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.square.light { background: #2b3040; }
+.square.dark { background: #1a1e29; }
+.square.selected { outline: 3px solid var(--accent); outline-offset: -3px; }
+.square.legal-target::after {
+  content: "";
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: 0.6;
+  position: absolute;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  min-width: 280px;
+  flex: 1;
+}
+
+.panel h2 {
+  margin-top: 0;
+  font-size: 1rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.bar-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-family: monospace;
+  margin-bottom: 2px;
+}
+
+.bar-track {
+  flex: 1;
+  height: 8px;
+  background: #0009;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  background: var(--accent);
+}
+
+.status {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin: 8px 0;
+}
+
+button {
+  background: var(--accent);
+  color: #0e1116;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
