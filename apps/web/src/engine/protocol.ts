@@ -1,7 +1,9 @@
 import type { ActivationFrame } from "../brain/activation";
 import type { MoveTrace } from "../traces/MoveTrace";
+import type { ModelId } from "./modelCatalog";
 
 export interface ModelManifestInfo {
+  modelId: ModelId;
   neuronCount: number;
   edgeCount: number;
   graphNeuronsSha256: string;
@@ -9,6 +11,9 @@ export interface ModelManifestInfo {
   sensoryMapSha256: string;
   outputMapSha256: string;
   checkpointSha256: string | null;
+  checkpointUrl: string;
+  trainingPreset: string;
+  trialsRun: number;
   modelLabel: string;
   modelBadge: string;
   backend: string;
@@ -37,14 +42,14 @@ export interface TraceVerification {
 }
 
 export type StockFlyRequest =
-  | { type: "load"; generation: number }
+  | { type: "load"; generation: number; modelId: ModelId }
   | { type: "position"; fen: string; traceId: string; generation: number; settleSteps?: number; frameMode?: "quantized" | "full" }
   | { type: "verify-trace"; generation: number; verificationId: string; trace: MoveTrace }
   | { type: "reset"; generation: number };
 
 export type StockFlyResponse =
-  | { type: "loaded"; generation: number; manifest: ModelManifestInfo }
-  | { type: "error"; generation: number; traceId?: string; verificationId?: string; message: string }
+  | { type: "loaded"; generation: number; modelId: ModelId; manifest: ModelManifestInfo }
+  | { type: "error"; generation: number; modelId?: ModelId; traceId?: string; verificationId?: string; message: string }
   | { type: "frame-restart"; generation: number; traceId: string; attempt: number; backend: string }
   | { type: "frame"; generation: number; traceId: string; attempt: number; frame: ActivationFrame }
   | { type: "verification"; generation: number; verificationId: string; result: TraceVerification }

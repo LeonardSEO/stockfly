@@ -53,7 +53,10 @@ h2 { font-size:18px; margin:0; letter-spacing:-.25px; }
 .control-heading { display:flex; align-items:center; justify-content:space-between; gap:10px; }
 .badge { color:#afd97c; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; }
 .muted { color:var(--muted); font-size:12px; line-height:1.6; }
-.mode-options { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:17px; }
+.model-options { margin-top:17px; }
+.model-options select { width:100%; }
+.model-unavailable { margin:7px 0 0; font-size:10px; }
+.mode-options { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:13px; }
 .game-options { display:flex; align-items:end; gap:9px; margin:12px 0 19px; }
 label { display:flex; flex-direction:column; gap:6px; color:var(--muted); font-size:11px; }
 select { border:1px solid #ffffff18; border-radius:5px; color:var(--text); background:#36332f; padding:9px; min-width:0; }
@@ -69,6 +72,8 @@ select { border:1px solid #ffffff18; border-radius:5px; color:var(--text); backg
 .model-summary { font-size:11px; display:flex; flex-wrap:wrap; align-items:center; gap:6px; color:var(--muted); line-height:1.5; }
 .model-summary strong { color:#d3d0c8; font-weight:600; }
 .model-summary small { flex-basis:100%; font-size:10px; overflow-wrap:anywhere; }
+.model-summary .model-training { flex-basis:100%; color:#d3d0c8; }
+.model-summary code { font:9px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; color:#aaa69e; }
 .backend-dot { height:6px; width:6px; background:var(--accent); border-radius:50%; }
 .moves { display:flex; flex-wrap:wrap; gap:8px 14px; font-size:13px; border-top:1px solid var(--line); margin-top:15px; padding-top:13px; max-height:100px; overflow:auto; }
 .move-number { color:#87837a; }

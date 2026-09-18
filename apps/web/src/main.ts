@@ -5,6 +5,7 @@ import { EngineVsFly } from './chess/EngineVsFly';
 import { BrainView } from './brain/BrainView';
 import type { ActivationFrame } from './brain/activation';
 import { InferenceLifecycle } from './engine/lifecycle';
+import { ModelSelectionLifecycle, availableModel, parseModelCatalog, type ModelCatalog, type ModelId } from './engine/modelCatalog';
 import type { ModelManifestInfo, StockFlyRequest, StockFlyResponse } from './engine/protocol';
 import type { StockfishRequest, StockfishResponse } from './engine/stockfish.worker';
 import { exportMoveTrace, MOVE_TRACE_VERSION, type MoveTrace } from './traces/MoveTrace';
@@ -13,6 +14,7 @@ import { DecisionPanel } from './ui/DecisionPanel';
 
 const game = new Game();
 const lifecycle = new InferenceLifecycle();
+const modelLoads = new ModelSelectionLifecycle();
 const humanMatch = new HumanVsFly('w');
 const engineMatch = new EngineVsFly('b');
 let matchMode: 'human' | 'engine' = 'human';
@@ -32,7 +34,10 @@ let replayTimer: number | null = null;
 let verificationSerial = 0;
 let activeVerificationId: string | null = null;
 let modelInfo: ModelManifestInfo | null = null;
-let statusText = 'Loading StockFly’s brain…';
+let modelCatalog: ModelCatalog | null = null;
+let selectedModelId: ModelId = 'bio-full';
+let modelLoading = true;
+let statusText = 'Loading the trained model catalog…';
 let loadFailed = false;
 let moveFailed = false;
 let pendingPromotion: { from: string; to: string } | null = null;
@@ -42,11 +47,12 @@ const app = document.getElementById('app')!;
 app.innerHTML = `<nav class="sidebar" aria-label="Main navigation"><a class="brand" href="#play"><span class="brand-symbol" aria-hidden="true">♞</span>Stock<span>Fly</span></a><a class="nav-link current" href="#play"><span aria-hidden="true">▦</span> Play</a><a class="nav-link" href="#brain"><span aria-hidden="true">◉</span> Brain</a><p class="sidebar-caption">Chess, through<br>a fly’s connectome.</p><a class="asset-credit" href="/pieces/README.txt">Piece credits</a></nav>
   <main id="play"><header class="page-heading"><div><p class="eyebrow">THE CONNECTOME AT PLAY</p><h1>Play StockFly</h1></div><span class="mode-label">Human vs Fly</span></header>
   <div class="workspace"><section class="board-workspace" aria-label="Chess game"><div class="player-strip" id="opponent"></div><div class="board" aria-label="Chessboard"></div><div class="player-strip" id="human"></div><p class="status game-status" role="status" aria-live="polite"></p><div class="promotion" hidden role="group" aria-label="Choose promotion"></div><section class="endgame-panel" role="dialog" aria-live="assertive" aria-labelledby="endgame-title" aria-describedby="endgame-reason" tabindex="-1" hidden><p class="eyebrow">GAME OVER</p><h2 id="endgame-title"></h2><p id="endgame-reason"></p><button id="endgame-restart" class="primary">Play again</button></section></section>
-  <aside class="context"><section class="game-controls"><div class="control-heading"><h2>Your game</h2><span class="badge">Loading…</span></div><p class="muted">The fly’s neural activity chooses its move.</p><div class="mode-options"><label>Mode<select id="mode"><option value="human">Human vs Fly</option><option value="engine">Stockfish vs Fly</option></select></label><label><span id="side-label">Play as</span><select id="side"><option value="w">White</option><option value="b">Black</option></select></label></div><div class="game-options"><button id="new-game" class="primary" disabled>Restart</button><button id="pause" class="secondary" hidden>Pause</button><button id="step" class="secondary" hidden>One ply</button></div><button id="retry" class="primary" hidden>Retry loading</button><div class="model-summary"></div><div class="moves" aria-label="Move history"><span class="muted">Moves will appear here.</span></div><a class="engine-credit" href="/vendor/stockfish/NOTICE.txt">Stockfish source and license</a></section>
+  <aside class="context"><section class="game-controls"><div class="control-heading"><h2>Your game</h2><span class="badge">Loading…</span></div><p class="muted">The fly’s neural activity chooses its move.</p><div class="model-options"><label>Trained model<select id="model" disabled><option>Loading catalog…</option></select></label><p class="model-unavailable muted"></p></div><div class="mode-options"><label>Mode<select id="mode"><option value="human">Human vs Fly</option><option value="engine">Stockfish vs Fly</option></select></label><label><span id="side-label">Play as</span><select id="side"><option value="w">White</option><option value="b">Black</option></select></label></div><div class="game-options"><button id="new-game" class="primary" disabled>Restart</button><button id="pause" class="secondary" hidden>Pause</button><button id="step" class="secondary" hidden>One ply</button></div><button id="retry" class="primary" hidden>Retry loading</button><div class="model-summary"></div><div class="moves" aria-label="Move history"><span class="muted">Moves will appear here.</span></div><a class="engine-credit" href="/vendor/stockfish/NOTICE.txt">Stockfish source and license</a></section>
   <section id="brain" class="brain-panel" aria-label="Live brain visualization"></section>
   <details class="decision-details"><summary>Decision details &amp; replay</summary><div id="decision-panel"></div></details></aside></div></main>`;
 const board = app.querySelector<HTMLElement>('.board')!;
 const status = app.querySelector<HTMLElement>('.game-status')!;
+const modelSelect = app.querySelector<HTMLSelectElement>('#model')!;
 const modeSelect = app.querySelector<HTMLSelectElement>('#mode')!;
 const sideSelect = app.querySelector<HTMLSelectElement>('#side')!;
 const sideLabel = app.querySelector<HTMLElement>('#side-label')!;
@@ -133,10 +139,12 @@ function render(): void {
   pauseButton.textContent = engineMatch.isPaused ? 'Resume' : 'Pause';
   pauseButton.disabled = !modelInfo;
   stepButton.disabled = !modelInfo || flyThinking || stockfishThinking;
+  modelSelect.disabled = !modelCatalog || modelLoading;
+  if (modelCatalog) modelSelect.value = selectedModelId;
   retryButton.hidden = !loadFailed && !moveFailed;
   retryButton.textContent = loadFailed ? 'Retry loading' : 'Retry move';
   const summary = app.querySelector('.model-summary')!;
-  summary.innerHTML = modelInfo ? `<span class="backend-dot" aria-hidden="true"></span><strong>${escapeHtml(modelInfo.backend)}</strong><span>${modelInfo.neuronCount.toLocaleString()} neurons · ${(modelInfo.edgeCount / 1e6).toFixed(1)}M edges</span><small>${escapeHtml(modelInfo.adapter)}${modelInfo.fallbackReason ? `<br>CPU fallback: ${escapeHtml(modelInfo.fallbackReason)}` : ''}</small>` : `<span class="muted">${loadFailed ? 'Model could not be loaded.' : 'Loading graph, learned weights and maps…'}</span>`;
+  summary.innerHTML = modelInfo ? `<span class="backend-dot" aria-hidden="true"></span><strong>${escapeHtml(modelInfo.backend)}</strong><span>${modelInfo.neuronCount.toLocaleString()} neurons · ${(modelInfo.edgeCount / 1e6).toFixed(1)}M edges</span><span class="model-training">${escapeHtml(modelInfo.modelLabel)} · ${escapeHtml(modelInfo.trainingPreset)} preset · ${modelInfo.trialsRun.toLocaleString()} trials</span><small>${escapeHtml(modelInfo.adapter)}${modelInfo.fallbackReason ? `<br>CPU fallback: ${escapeHtml(modelInfo.fallbackReason)}` : ''}<br>checkpoint SHA-256 <code>${escapeHtml(modelInfo.checkpointSha256 ?? '')}</code><br>catalog asset <code>${escapeHtml(modelInfo.checkpointUrl)}</code></small>` : `<span class="muted">${loadFailed ? 'Model could not be loaded.' : 'Loading graph, learned weights and maps…'}</span>`;
   const history = game.history();
   app.querySelector('.moves')!.innerHTML = history.length ? history.map((move, index) => `${index % 2 === 0 ? `<span class="move-number">${Math.floor(index / 2) + 1}.</span>` : ''}<span>${escapeHtml(move)}</span>`).join('') : '<span class="muted">Moves will appear here.</span>';
 }
@@ -269,17 +277,73 @@ function onSquareClick(square: string): void {
   }
 }
 
-function resetGame(): void {
-  const generation = lifecycle.reset();
-  post({ type: 'reset', generation });
-  postStockfish({ type: 'reset', generation });
+function clearGameState(): void {
   flyThinking = false; stockfishThinking = false; activeStockfish = null; moveFailed = false; game.reset();
   engineMatch.restart();
   selectedSquare = null; legalTargets = []; lastMove = []; lastTrace = null; timeline = null; pendingFrames = []; pendingAttempt = 0; pendingPromotion = null;
   activeVerificationId = null; stopReplay();
   app.querySelector<HTMLElement>('.promotion')!.hidden = true;
-  brain.reset(); decisionPanel.reset(); statusText = matchMode === 'human' ? 'New game. Your move.' : 'Exhibition restarted.';
+  brain.reset(); decisionPanel.reset();
+}
+
+function resetGame(): void {
+  const generation = lifecycle.reset();
+  post({ type: 'reset', generation });
+  postStockfish({ type: 'reset', generation });
+  clearGameState();
+  statusText = matchMode === 'human' ? 'New game. Your move.' : 'Exhibition restarted.';
   render(); advanceMatch();
+}
+
+function populateModelOptions(): void {
+  if (!modelCatalog) return;
+  modelSelect.innerHTML = modelCatalog.models.map(model => {
+    const suffix = model.availability === 'available'
+      ? `${model.trainingPreset} · ${model.trialsRun.toLocaleString()} trials`
+      : 'unavailable';
+    return `<option value="${model.id}" ${model.availability === 'unavailable' ? 'disabled' : ''}>${escapeHtml(model.label)} — ${escapeHtml(suffix)}</option>`;
+  }).join('');
+  const lite = modelCatalog.models.find(model => model.id === 'lite');
+  app.querySelector<HTMLElement>('.model-unavailable')!.textContent = lite?.availability === 'unavailable'
+    ? `Lite unavailable: ${lite.reason}`
+    : '';
+}
+
+function loadModel(modelId: ModelId): void {
+  if (!modelCatalog) return;
+  const selected = availableModel(modelCatalog, modelId);
+  selectedModelId = modelId;
+  const generation = lifecycle.reset();
+  modelLoads.begin({ generation, modelId });
+  post({ type: 'reset', generation });
+  postStockfish({ type: 'reset', generation });
+  clearGameState();
+  modelInfo = null;
+  modelLoading = true;
+  loadFailed = false;
+  statusText = `Loading ${selected.label} from its verified checkpoint…`;
+  render();
+  post({ type: 'load', generation, modelId });
+}
+
+async function loadCatalog(): Promise<void> {
+  modelLoading = true;
+  loadFailed = false;
+  statusText = 'Loading the trained model catalog…';
+  render();
+  try {
+    const response = await fetch('/vendor/models/catalog.json');
+    if (!response.ok) throw new Error(`Model catalog HTTP ${response.status}`);
+    modelCatalog = parseModelCatalog(await response.json());
+    populateModelOptions();
+    loadModel(selectedModelId);
+  } catch (error) {
+    modelCatalog = null;
+    modelLoading = false;
+    loadFailed = true;
+    statusText = `Model catalog failed: ${error instanceof Error ? error.message : String(error)}`;
+    render();
+  }
 }
 
 board.addEventListener('click', event => {
@@ -294,6 +358,7 @@ app.querySelector('.promotion')!.addEventListener('click', event => {
 });
 newGameButton.onclick = resetGame;
 app.querySelector<HTMLButtonElement>('#endgame-restart')!.onclick = resetGame;
+modelSelect.onchange = () => loadModel(modelSelect.value as ModelId);
 modeSelect.onchange = () => {
   matchMode = modeSelect.value as 'human' | 'engine';
   if (matchMode === 'engine') engineMatch.resume();
@@ -316,7 +381,10 @@ stepButton.onclick = () => {
   render(); advanceMatch();
 };
 retryButton.onclick = () => {
-  if (loadFailed) { loadFailed = false; statusText = 'Loading StockFly’s brain…'; render(); post({ type: 'load', generation: lifecycle.generation }); }
+  if (loadFailed) {
+    if (modelCatalog) loadModel(selectedModelId);
+    else void loadCatalog();
+  }
   else advanceMatch();
 };
 
@@ -324,8 +392,10 @@ worker.addEventListener('message', (event: MessageEvent<StockFlyResponse>) => {
   const msg = event.data;
   if (msg.generation !== lifecycle.generation) return;
   if (msg.type === 'loaded') {
+    if (!modelLoads.finish({ generation: msg.generation, modelId: msg.modelId })) return;
     modelInfo = msg.manifest; loadFailed = false;
-    statusText = matchMode === 'human' ? 'Your move. Select a piece to begin.' : 'Exhibition ready.';
+    modelLoading = false;
+    statusText = matchMode === 'human' ? `${modelInfo.modelLabel} ready. Select a piece to begin.` : `${modelInfo.modelLabel} exhibition ready.`;
     render(); advanceMatch();
   } else if (msg.type === 'frame-restart') {
     if (!lifecycle.accepts(msg) || msg.attempt <= pendingAttempt) return;
@@ -391,14 +461,16 @@ worker.addEventListener('message', (event: MessageEvent<StockFlyResponse>) => {
       if (msg.verificationId === activeVerificationId) { activeVerificationId = null; decisionPanel.showError(`CPU verification failed: ${msg.message}`); }
       return;
     }
+    if (msg.modelId && !modelLoads.finish({ generation: msg.generation, modelId: msg.modelId })) return;
     statusText = `Error: ${msg.message}`; flyThinking = false;
-    if (msg.traceId) { moveFailed = true; lifecycle.finish(); } else loadFailed = true;
+    if (msg.traceId) { moveFailed = true; lifecycle.finish(); }
+    else { loadFailed = true; modelLoading = false; }
     render();
   }
 });
 worker.addEventListener('error', event => {
   statusText = `Worker failed: ${event.message}. Reload the page to restart.`;
-  flyThinking = false; lifecycle.reset(); modelInfo = null; render();
+  flyThinking = false; modelLoading = false; loadFailed = true; modelLoads.cancel(); lifecycle.reset(); modelInfo = null; render();
 });
 stockfishWorker.addEventListener('message', (event: MessageEvent<StockfishResponse>) => {
   const msg = event.data;
@@ -435,4 +507,4 @@ window.addEventListener('pagehide', event => {
   lifecycle.reset(); worker.terminate(); stockfishWorker.terminate(); brain.dispose();
 });
 render();
-post({ type: 'load', generation: lifecycle.generation });
+void loadCatalog();

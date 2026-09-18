@@ -3,6 +3,7 @@ import type { DecisionReadout } from "../brain/activation";
 import { quantize, topNeurons, summarizeRegions } from "../brain/activation";
 import type { MoveTrace } from "../traces/MoveTrace";
 import { FrameStreamTracker } from "./frameStream";
+import { availableModel, parseCheckpointIdentity, parseModelCatalog, validateCheckpointIdentity, type ModelId } from "./modelCatalog";
 import { modelTruthBadge } from "./modelTruth";
 import type { ModelManifestInfo, StockFlyRequest, StockFlyResponse, TraceVerification } from "./protocol";
 import { compareRecordedActivation, CPU_DECISION_TOLERANCE } from "./traceVerification";
@@ -84,70 +85,81 @@ async function concatBlocks(dir: string, filenames: string[]): Promise<Uint8Arra
   return out;
 }
 
-async function loadEngine(requestGeneration: number) {
-  await init();
-
-  const manifestRes = await fetchRequired("/vendor/graph/manifest.json");
-  const manifestText = await manifestRes.text();
-  const manifest = JSON.parse(manifestText);
-
-  const neuronsRes = await fetchRequired("/vendor/graph/neurons.bin");
-  const offsetsRes = await fetchRequired("/vendor/graph/offsets.bin");
-  const neurons = new Uint8Array(await neuronsRes.arrayBuffer());
-  const offsets = new Uint8Array(await offsetsRes.arrayBuffer());
-
-  const blocks = [...manifest.edge_blocks].sort((a: { index: number }, b: { index: number }) => a.index - b.index);
-  const srcNames = blocks.map((b: { index: number }) => `edge_src_blocks/${String(b.index).padStart(4, "0")}.bin`);
-  const weightNames = blocks.map((b: { index: number }) => `edge_weight_blocks/${String(b.index).padStart(4, "0")}.bin`);
-  const edgeSrc = await concatBlocks("/vendor/graph", srcNames);
-  const edgeWeight = await concatBlocks("/vendor/graph", weightNames);
-
-  const sensoryJson = await (await fetchRequired("/vendor/chess-maps/sensory-map.json")).text();
-  const outputJson = await (await fetchRequired("/vendor/chess-maps/output-map.json")).text();
-
-  engine = new StockFlyEngine(manifestText, neurons, offsets, edgeSrc, edgeWeight, sensoryJson, outputJson);
-
-  // Only a genuine 404 means no trained model. Corrupt checkpoints and
-  // network failures are actionable load errors, never a silent baseline.
-  const checkpointRes = await fetch("/vendor/checkpoints/stockfly-bio-full.sfckpt");
-  let checkpointSha256: string | null = null;
-  if (checkpointRes.ok) {
-    const checkpointText = await checkpointRes.text();
-    engine.load_checkpoint(checkpointText);
-    checkpointSha256 = await sha256(checkpointText);
-  }
-  else if (checkpointRes.status !== 404) throw new Error(`Checkpoint HTTP ${checkpointRes.status}`);
-
-  // Annotations are optional for chess inference. The brain panel reports
-  // unavailable/corrupt metadata; do not invent regions when it is missing.
-  regions = null;
+async function loadEngine(requestGeneration: number, modelId: ModelId) {
+  let nextEngine: StockFlyEngine | null = null;
   try {
-    const metadata = await (await fetchRequired("/vendor/brain/metadata.json")).json();
-    regions = parseAnnotations(metadata, engine.neuron_count(), manifest.neurons_sha256).map(row => row[3]);
-  } catch { /* Frames explicitly carry no region summaries without annotations. */ }
+    const catalog = parseModelCatalog(await (await fetchRequired("/vendor/models/catalog.json")).json());
+    const selectedModel = availableModel(catalog, modelId);
+    const checkpointText = await (await fetchRequired(selectedModel.checkpointUrl)).text();
+    const checkpointSha256 = await sha256(checkpointText);
+    const checkpointIdentity = parseCheckpointIdentity(checkpointText);
+    validateCheckpointIdentity(selectedModel, checkpointIdentity, checkpointSha256);
+    if (requestGeneration !== generation) return;
 
-  const backend = JSON.parse(await engine.initialize_gpu());
+    await init();
+    const manifestRes = await fetchRequired("/vendor/graph/manifest.json");
+    const manifestText = await manifestRes.text();
+    const manifest = JSON.parse(manifestText);
 
-  const modelLabel = engine.model_label();
-  loadedManifest = {
-    neuronCount: engine.neuron_count(),
-    edgeCount: engine.edge_count(),
-    graphNeuronsSha256: manifest.neurons_sha256,
-    graphManifestSha256: await sha256(manifestText),
-    sensoryMapSha256: await sha256(sensoryJson),
-    outputMapSha256: await sha256(outputJson),
-    checkpointSha256,
-    modelLabel,
-    modelBadge: modelTruthBadge(modelLabel),
-    backend: backend.backend,
-    adapter: backend.adapter,
-    ...(backend.fallback_reason ? { fallbackReason: backend.fallback_reason } : {}),
-  };
-  post({
-    type: "loaded",
-    generation: requestGeneration,
-    manifest: loadedManifest,
-  });
+    const neuronsRes = await fetchRequired("/vendor/graph/neurons.bin");
+    const offsetsRes = await fetchRequired("/vendor/graph/offsets.bin");
+    const neurons = new Uint8Array(await neuronsRes.arrayBuffer());
+    const offsets = new Uint8Array(await offsetsRes.arrayBuffer());
+
+    const blocks = [...manifest.edge_blocks].sort((a: { index: number }, b: { index: number }) => a.index - b.index);
+    const srcNames = blocks.map((b: { index: number }) => `edge_src_blocks/${String(b.index).padStart(4, "0")}.bin`);
+    const weightNames = blocks.map((b: { index: number }) => `edge_weight_blocks/${String(b.index).padStart(4, "0")}.bin`);
+    const edgeSrc = await concatBlocks("/vendor/graph", srcNames);
+    const edgeWeight = await concatBlocks("/vendor/graph", weightNames);
+
+    const sensoryJson = await (await fetchRequired("/vendor/chess-maps/sensory-map.json")).text();
+    const outputJson = await (await fetchRequired("/vendor/chess-maps/output-map.json")).text();
+    if (requestGeneration !== generation) return;
+
+    nextEngine = new StockFlyEngine(manifestText, neurons, offsets, edgeSrc, edgeWeight, sensoryJson, outputJson);
+    nextEngine.load_checkpoint(checkpointText);
+    const modelLabel = nextEngine.model_label();
+    if (modelLabel !== checkpointIdentity.modelKind || modelLabel !== selectedModel.expectedKind) {
+      throw new Error(`${selectedModel.label} loaded as incompatible model kind ${modelLabel}`);
+    }
+
+    // Annotations are optional for chess inference. The brain panel reports
+    // unavailable/corrupt metadata; do not invent regions when it is missing.
+    let nextRegions: string[] | null = null;
+    try {
+      const metadata = await (await fetchRequired("/vendor/brain/metadata.json")).json();
+      nextRegions = parseAnnotations(metadata, nextEngine.neuron_count(), manifest.neurons_sha256).map(row => row[3]);
+    } catch { /* Frames explicitly carry no region summaries without annotations. */ }
+
+    const backend = JSON.parse(await nextEngine.initialize_gpu());
+    if (requestGeneration !== generation) return;
+    const nextManifest: ModelManifestInfo = {
+      modelId,
+      neuronCount: nextEngine.neuron_count(),
+      edgeCount: nextEngine.edge_count(),
+      graphNeuronsSha256: manifest.neurons_sha256,
+      graphManifestSha256: await sha256(manifestText),
+      sensoryMapSha256: await sha256(sensoryJson),
+      outputMapSha256: await sha256(outputJson),
+      checkpointSha256,
+      checkpointUrl: selectedModel.checkpointUrl,
+      trainingPreset: checkpointIdentity.trainingPreset,
+      trialsRun: checkpointIdentity.trialsRun,
+      modelLabel,
+      modelBadge: modelTruthBadge(modelLabel),
+      backend: backend.backend,
+      adapter: backend.adapter,
+      ...(backend.fallback_reason ? { fallbackReason: backend.fallback_reason } : {}),
+    };
+    if (requestGeneration !== generation) return;
+    engine = nextEngine;
+    nextEngine = null;
+    regions = nextRegions;
+    loadedManifest = nextManifest;
+    post({ type: "loaded", generation: requestGeneration, modelId, manifest: nextManifest });
+  } finally {
+    nextEngine?.free();
+  }
 }
 
 function post(msg: StockFlyResponse, transfer: Transferable[] = []) {
@@ -278,7 +290,7 @@ async function handle(req: Exclude<StockFlyRequest, { type: "reset" }>) {
       engine?.free();
       engine = null;
       loadedManifest = null;
-      await loadEngine(req.generation);
+      await loadEngine(req.generation, req.modelId);
     } else if (req.type === "verify-trace") {
       post({ type: "verification", generation: req.generation, verificationId: req.verificationId, result: await verifyTrace(req.trace) });
     } else {
@@ -334,6 +346,7 @@ async function handle(req: Exclude<StockFlyRequest, { type: "reset" }>) {
   } catch (e) {
     if (req.generation !== generation) return;
     post({ type: "error", generation: req.generation,
+      ...(req.type === "load" ? { modelId: req.modelId } : {}),
       ...(req.type === "position" ? { traceId: req.traceId } : {}),
       ...(req.type === "verify-trace" ? { verificationId: req.verificationId } : {}),
       message: e instanceof Error ? e.message : String(e) });

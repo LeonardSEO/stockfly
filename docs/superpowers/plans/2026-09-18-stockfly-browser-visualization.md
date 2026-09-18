@@ -224,3 +224,14 @@ Play one human move, wait for fly response, assert brain activation canvas updat
 WebGPU failure must fall back instead of showing a blank screen.
 
 - [ ] **Step 5: Commit**
+
+### Task 7: Select trained Bio and Max models and show their training identity
+
+User addition (2026-09-18): expose the actually trained models, not only Bio, and benchmark each separately. Lite remains unavailable until the Full causal prerequisite passes.
+
+- [ ] Add a visible Bio Full / Max Full model selector using real local checkpoints; show unavailable states and explain why Lite is not available.
+- [ ] Show actual checkpoint training preset and trial count, model kind, and hash/provenance; never infer training status from a filename.
+- [ ] Switching models cancels old match/frame/decision/error/verification events, safely reloads the selected model, and resets the game. Preserve mode and side preferences when safe.
+- [ ] Use a reusable local model catalog/asset arrangement that release packaging can reproduce; prefer the completed new Max quick checkpoint once available, without overwriting previous checkpoints or shared sources.
+- [ ] Add meaningful model-selection/lifecycle and incompatible-kind tests; run affected checks and one narrow actual Max-loading browser scenario.
+- [ ] Commit scoped implementation and report exact model identities tested.

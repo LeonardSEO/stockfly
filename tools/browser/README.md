@@ -21,7 +21,7 @@ node --experimental-strip-types --test apps/web/src/brain/activation.test.ts app
 npx tsc --noEmit --target ES2022 --module ESNext --moduleResolution bundler --lib ES2022,DOM --skipLibCheck apps/web/src/main.ts apps/web/src/engine/stockfly.worker.ts
 ```
 
-Build WASM first after changing the binding; then `npm run build --workspace apps/web`. The application reports missing geometry separately from engine load failures. A checkpoint 404 explicitly loads the untrained baseline; other checkpoint errors stop model loading.
+Build WASM first after changing the binding; then `npm run build --workspace apps/web`. The application reports missing geometry separately from engine load failures. Missing, corrupt, or incompatible prepared checkpoints stop model loading rather than silently selecting another model.
 
 ## Stockfish exhibition engine
 
@@ -38,3 +38,20 @@ python3 tools/browser/fetch_stockfish.py --source-dir /path/to/stockfish-assets 
 ```
 
 The generated `data/vendor/stockfish-19-lite` directory contains the exact source URLs, hashes, attribution notice, and upstream GPL text. `apps/web/public/vendor/stockfish` is a tracked symlink to that cache. Evaluation scores and principal variations remain inside the isolated Stockfish worker; the application receives only a validated best move.
+
+## Trained model catalog
+
+Prepare the two approved Full checkpoints for local browser development:
+
+```bash
+npm run assets:models --workspace apps/web
+```
+
+The command reads checkpoint metadata and bytes from the source artifacts, verifies the expected model kind, and writes an ignored `data/browser-models/catalog.json`. Checkpoint assets use content-addressed names, so promoting a completed training run changes the catalog without overwriting an older checkpoint or editing product code:
+
+```bash
+npm run assets:models --workspace apps/web -- \
+  --max-source data/training-runs/max-quick-2026-09-18/stockfly-max-full.sfckpt
+```
+
+Run promotion only after the trainer has completed the checkpoint. Local development uses symlinks in its own cache and never writes shared checkpoint sources. Release preparation can materialize the same layout with `--mode copy --output-dir <staging-directory>`.
