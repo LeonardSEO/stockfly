@@ -6,7 +6,7 @@ StockFly runs a full simulation of the [Janelia MaleCNS v1.0](https://www.janeli
 
 It runs entirely on your own machine. No cloud, no account, no server round-trip once assets are downloaded.
 
-> **Status: active weekend build, in progress.** This README describes the target experience. Check the [Roadmap](#roadmap) below for what's actually working today. Follow [issues](https://github.com/LeonardSEO/stockfly/issues) and commits for live progress.
+> **Status: active weekend build, in progress.** The core claim already works end-to-end and is verified: the complete real MaleCNS connectome runs in a browser via WebAssembly, plays a legal chess move against a human, and shows the actual neural activity that produced it. The one-command install below (GitHub Release download) isn't wired up yet — see [Running it today](#running-it-today) for how to run it from source right now. Check the [Roadmap](#roadmap) for the rest. Follow [issues](https://github.com/LeonardSEO/stockfly/issues) and commits for live progress.
 
 ---
 
@@ -69,6 +69,31 @@ cd stockfly
 
 Nothing leaves your machine. The local server only binds to `127.0.0.1` and sets the cross-origin isolation headers (`COOP`/`COEP`) needed for multithreaded WASM and `SharedArrayBuffer`.
 
+## Running it today
+
+The Release-download flow above is the target experience; the release-publishing automation isn't built yet. Right now, run it from source (macOS, Apple Silicon recommended):
+
+```bash
+git clone https://github.com/LeonardSEO/stockfly && cd stockfly
+
+# 1. Fetch the real Janelia MaleCNS v1.0 data and compile the connectome
+python3.12 -m venv .venv && .venv/bin/pip install -r tools/malecns/requirements.txt
+.venv/bin/python tools/malecns/fetch.py
+.venv/bin/python tools/malecns/compile.py --input data/raw/malecns-v1 --output data/compiled/malecns-v1
+.venv/bin/python tools/malecns/geometry.py --input data/raw/malecns-v1 --compiled data/compiled/malecns-v1
+
+# 2. Build the WASM engine
+rustup target add wasm32-unknown-unknown  # if not already installed
+cargo install wasm-pack
+cd crates/stockfly-wasm && wasm-pack build --target web --release --out-dir ../../apps/web/src/wasm-gen && cd ../..
+
+# 3. Build and serve the web app
+npm install && npm --prefix apps/web run build
+cargo run -p stockfly-server --release -- --web-dir apps/web/dist --model-dir data/checkpoints --open
+```
+
+This is exactly the path used to verify the app in a real browser during development — see the commit history for details.
+
 ## Training locally
 
 Training is designed to run entirely on a 16 GB Apple Silicon MacBook (or comparable hardware) — no external GPU or server required. It uses Stockfish 19 Lite as a local curriculum teacher plus biologically-motivated local plasticity rules (not full backpropagation-through-time through the whole recurrent graph), with wall-clock-bounded presets:
@@ -104,16 +129,18 @@ localhost
 
 ## Roadmap
 
-- [ ] Official MaleCNS fetch + compile pipeline
-- [ ] CPU reference simulator + wgpu (Metal/DX12/Vulkan/WebGPU) accelerated simulator
-- [ ] Fixed sensory encoding (chess board → fly visual input) and fixed neural move output
-- [ ] Stockfish 19 Lite curriculum teacher + local training pipeline (Bio / Max)
-- [ ] Local browser app: Human vs StockFly, Stockfish vs StockFly
-- [ ] Live 3D connectome visualization with real activation overlay and move-trace replay
-- [ ] Causal audit suite (no-teacher, shuffled-graph, weight-reset, ablation, output-permutation controls)
+- [x] Official MaleCNS fetch + compile pipeline (real v1.0 data: 165,122 neurons, 25,563,197 edges, verified against the design spec's ~167k/25.6M targets)
+- [x] CPU reference simulator, running the complete real graph — wgpu (Metal/DX12/Vulkan/WebGPU) acceleration not yet implemented
+- [x] Fixed sensory encoding (chess board → real `ol_sensory`/`cb_sensory` populations) and fixed neural move output (real `descending_neuron` population)
+- [x] Stockfish 19 (local, via Homebrew) curriculum teacher + local Bio plasticity training pipeline; Max mode implemented, less tuned so far
+- [x] Local browser app: Human vs StockFly, running the complete real connectome in WebAssembly, verified end-to-end in a real browser — Stockfish vs StockFly exhibition mode not yet wired up
+- [ ] Live 3D connectome visualization with real activation overlay and move-trace replay (current UI shows real from/to activation bars, not yet a 3D brain view)
+- [x] No-teacher causal-audit control (verified: inference is byte-identical whether Stockfish is reachable on PATH or not) — shuffled-graph, weight-reset, ablation, and output-permutation controls not yet implemented
 - [ ] First measured playing-strength ladder
-- [ ] Pretrained checkpoints published as GitHub Releases
+- [ ] Pretrained checkpoints published as GitHub Releases (checkpoint format and browser-side loading both work; release publishing automation not yet built)
 - [ ] StockFly Lite (pruned/quantized, for lower-end hardware)
+
+First real, measured training result (`quick` preset, Bio mode, 4,934 Stockfish-labeled positions): 10.58% teacher-move top-1 accuracy, vs. an 8.02% untrained baseline measured on the same simulator path. This is an early, honest number — not a target, a starting point to grow from.
 
 ## License
 
