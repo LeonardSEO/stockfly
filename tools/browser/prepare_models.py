@@ -74,7 +74,8 @@ def prepare_asset(source: Path, destination: Path, mode: str, expected_sha256: s
     if destination.exists() or destination.is_symlink():
         if sha256(destination) != expected_sha256:
             raise ValueError(f"Content-addressed asset collision: {destination}")
-        return
+        if mode != "copy" or not destination.is_symlink():
+            return
     destination.parent.mkdir(parents=True, exist_ok=True)
     temporary = destination.with_name(f".{destination.name}.{os.getpid()}.tmp")
     try:
