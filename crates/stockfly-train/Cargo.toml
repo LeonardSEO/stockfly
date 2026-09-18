@@ -1,0 +1,15 @@
+[package]
+name = "stockfly-train"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "stockfly-train"
+path = "src/main.rs"
+
+[dependencies]
+stockfly-connectome = { path = "../stockfly-connectome" }
+stockfly-sim = { path = "../stockfly-sim" }
+stockfly-chess = { path = "../stockfly-chess" }

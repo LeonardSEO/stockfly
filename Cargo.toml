@@ -4,6 +4,8 @@ members = [
     "crates/stockfly-types",
     "crates/stockfly-connectome",
     "crates/stockfly-sim",
+    "crates/stockfly-chess",
+    "crates/stockfly-train",
 ]
 
 [workspace.package]
