@@ -125,3 +125,37 @@ The complete per-position report is ignored by Git and remains at
   exact.
 - Trace replay, top-region ranking, preregistered collapse thresholds, independent
   held-out data, and Elo/game measurements remain outside this task.
+
+## Review round 1 fixes
+
+The direct `stockfly-train causal-audit` JSON now contains an `inputs` object
+with actual-byte SHA-256 values for the checkpoint, complete graph file set and
+canonical aggregate, manifest, suite, sensory/output maps, audit metadata, and
+running executable. Graph blocks are streamed in 1 MiB chunks, verified against
+the manifest, and never buffered as another full graph. The native path hashes
+before and after evaluation and refuses to emit a report if inputs change. The
+Python wrapper independently computes the same canonical values and rejects any
+disagreement rather than injecting provenance after native execution.
+
+The shuffle regression now contains acetylcholine and dopamine sources with the
+same positive sign, GABA and glutamate sources with the same negative sign, and
+connected sources in out-degree bins 0, 1, and 2. Every remapped edge is checked
+against the original source's exact transmitter, sign, and degree-bin stratum.
+The output-permutation regression now exercises the same paired-decision helper
+used by production evaluation, observes both intact and permuted readouts from
+one immutable rate slice, and verifies that the relabeled readout changes while
+the intact readout still reflects the original activity.
+
+Validation commands and results:
+
+```text
+cargo test -p stockfly-train --test controls --test native_hashes
+```
+
+Result: 6 passed, 0 failed (5 control regressions and 1 native hash/CLI
+fixture). The final native fixture also proved that changing an actual graph
+block without its manifest digest makes the CLI reject the input. No
+175-position audit was repeated because the scientific computation did not
+change. The previous full report retains its original evaluator binary hash;
+the amended report-producing binary was verified with the one-position native
+CLI fixture (0.44 seconds).

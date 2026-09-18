@@ -24,8 +24,8 @@ fn manifest(neurons: usize, edges: usize) -> stockfly_connectome::format::Compil
         "offsets_sha256": "fixture-offsets",
         "edge_blocks": [],
         "sign_policy": {
-            "excitatory_transmitters": ["acetylcholine"],
-            "inhibitory_transmitters": ["gaba"],
+            "excitatory_transmitters": ["acetylcholine", "dopamine"],
+            "inhibitory_transmitters": ["gaba", "glutamate"],
             "unresolved_default": "excitatory",
             "source_column": "consensus_nt",
             "derived_from": "presynaptic fixture"
@@ -69,28 +69,67 @@ fn checkpoint() -> Checkpoint {
 
 #[test]
 fn shuffled_graph_is_seeded_degree_and_transmitter_compatible_and_non_destructive() {
+    let transmitters = [
+        "acetylcholine",
+        "acetylcholine", // degree 1, excitatory
+        "acetylcholine",
+        "acetylcholine", // degree 2, excitatory
+        "dopamine",
+        "dopamine", // degree 1, also excitatory but distinct
+        "dopamine",
+        "dopamine", // degree 4, distinct nonzero bin
+        "gaba",
+        "gaba", // degree 1, inhibitory
+        "glutamate",
+        "glutamate", // degree 2, also inhibitory but distinct
+        "acetylcholine",
+        "acetylcholine", // zero-degree destinations
+    ];
+    let source_destinations: Vec<Vec<usize>> = vec![
+        vec![12],
+        vec![13],
+        vec![10, 11],
+        vec![10, 11],
+        vec![12],
+        vec![13],
+        vec![8, 9, 10, 11],
+        vec![8, 9, 10, 11],
+        vec![12],
+        vec![13],
+        vec![8, 9],
+        vec![8, 9],
+        vec![],
+        vec![],
+    ];
+    let mut edges = Vec::new();
+    for (source, destinations) in source_destinations.iter().enumerate() {
+        let inhibitory = matches!(transmitters[source], "gaba" | "glutamate");
+        for &destination in destinations {
+            edges.push((
+                destination,
+                source as u32,
+                if inhibitory { -1.0 } else { 1.0 },
+            ));
+        }
+    }
+    edges.sort_by_key(|&(destination, source, _)| (destination, source));
+    let mut offsets = vec![0u64; transmitters.len() + 1];
+    for &(destination, _, _) in &edges {
+        offsets[destination + 1] += 1;
+    }
+    for index in 1..offsets.len() {
+        offsets[index] += offsets[index - 1];
+    }
     let graph = Connectome {
-        manifest: manifest(8, 6),
-        neurons: (0..8).map(|body_id| NeuronRecord { body_id }).collect(),
-        // dst 2 gets two excitatory inputs, dst 3 gets two excitatory
-        // inputs, and dst 4 gets two inhibitory inputs.
-        offsets: vec![0, 0, 0, 2, 4, 6, 6, 6, 6],
-        edge_src: vec![0, 1, 2, 3, 4, 5],
-        edge_weight: vec![1.0, 1.0, 2.0, 2.0, -1.0, -1.0],
+        manifest: manifest(transmitters.len(), edges.len()),
+        neurons: (0..transmitters.len() as u64)
+            .map(|body_id| NeuronRecord { body_id })
+            .collect(),
+        offsets,
+        edge_src: edges.iter().map(|&(_, source, _)| source).collect(),
+        edge_weight: edges.iter().map(|&(_, _, weight)| weight).collect(),
     };
-    let metadata = metadata(
-        &[
-            "acetylcholine",
-            "acetylcholine",
-            "acetylcholine",
-            "acetylcholine",
-            "gaba",
-            "gaba",
-            "acetylcholine",
-            "gaba",
-        ],
-        &["a", "a", "a", "a", "b", "b", "c", "c"],
-    );
+    let metadata = metadata(&transmitters, &["fixture"; 14]);
     let original_sources = graph.edge_src.clone();
     let original_weights = graph.edge_weight.clone();
     let (first, stats) = shuffle::degree_aware(&graph, &metadata, 91).unwrap();
@@ -106,9 +145,37 @@ fn shuffled_graph_is_seeded_degree_and_transmitter_compatible_and_non_destructiv
     assert!(stats.changed_edges > 0);
     assert_eq!(stats.destination_fan_in_max_abs_delta, 0);
     assert!(stats.source_out_degree_distribution_preserved);
-    for (&source, &weight) in first.edge_src.iter().zip(&first.edge_weight) {
-        let transmitter = &metadata.neurons[source as usize].transmitter;
-        assert_eq!(weight.is_sign_negative(), transmitter == "gaba");
+    let degree_bin = |degree: usize| {
+        if degree == 0 {
+            0
+        } else {
+            usize::BITS - 1 - degree.leading_zeros()
+        }
+    };
+    for ((&old_source, &new_source), &weight) in graph
+        .edge_src
+        .iter()
+        .zip(&first.edge_src)
+        .zip(&first.edge_weight)
+    {
+        let old_source = old_source as usize;
+        let new_source = new_source as usize;
+        assert_eq!(
+            metadata.neurons[new_source].transmitter, metadata.neurons[old_source].transmitter,
+            "shuffle crossed an exact transmitter stratum"
+        );
+        assert_eq!(
+            degree_bin(source_destinations[new_source].len()),
+            degree_bin(source_destinations[old_source].len()),
+            "shuffle crossed an out-degree bin"
+        );
+        assert_eq!(
+            weight.is_sign_negative(),
+            matches!(
+                metadata.neurons[new_source].transmitter.as_str(),
+                "gaba" | "glutamate"
+            )
+        );
     }
     assert_eq!(graph.edge_src, original_sources);
     assert_eq!(graph.edge_weight, original_weights);
@@ -188,8 +255,21 @@ fn output_permutation_relabels_every_square_without_touching_activity() {
     let activity: Vec<f32> = (0..132).map(|value| value as f32).collect();
     let before = activity.clone();
     let (permuted, stats) = output_permutation::permute(&output, 1234).unwrap();
+    let (intact_decision, permuted_decision) = output_permutation::paired_decisions(
+        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        &activity,
+        &output,
+        &permuted,
+    )
+    .unwrap();
     assert_eq!(stats.fixed_square_labels, 0);
     assert_eq!(activity, before);
+    assert_eq!(intact_decision.from_rates[0], activity[0]);
+    assert_eq!(
+        permuted_decision.from_rates[0],
+        activity[permuted.from_groups[0][0] as usize]
+    );
+    assert_ne!(intact_decision.from_rates, permuted_decision.from_rates);
     assert!(permuted
         .from_groups
         .iter()

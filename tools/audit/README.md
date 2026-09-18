@@ -78,8 +78,9 @@ python3 tools/audit/causal_controls.py \
 The native evaluator runs intact, weight-reset, shuffled-graph, selected
 MaleCNS-superclass population ablation, output-label permutation, and fixed
 random brain-bypass conditions.
-The wrapper verifies all compiled blocks and hashes the checkpoint, suite, maps,
-metadata, and executable before and after evaluation. Reports record seeds,
+The native evaluator and wrapper independently verify all compiled blocks and
+hash the checkpoint, suite, maps, metadata, and executable before and after
+evaluation. Reports record seeds,
 calibration, graph/control statistics, per-position decisions, measured deltas,
 and limitations. No report declares a scientific pass from implementation tests;
 the observed control deltas must be interpreted against a preregistered criterion.

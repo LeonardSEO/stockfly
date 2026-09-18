@@ -1,5 +1,8 @@
 use serde::Serialize;
-use stockfly_chess::output_map::OutputMap;
+use stockfly_chess::{
+    output_map::OutputMap,
+    policy::{choose_move, MoveDecision},
+};
 
 use super::shuffle::SeededRng;
 
@@ -41,5 +44,20 @@ pub fn permute(output: &OutputMap, seed: u64) -> Result<(OutputMap, OutputPermut
             square_labels: permutation.to_vec(),
             fixed_square_labels,
         },
+    ))
+}
+
+/// Evaluates both output labelings from the exact same immutable simulator
+/// rate slice. Keeping this pairing here makes the activity-control invariant
+/// explicit and directly testable.
+pub fn paired_decisions(
+    fen: &str,
+    intact_rates: &[f32],
+    intact: &OutputMap,
+    permuted: &OutputMap,
+) -> stockfly_chess::policy::Result<(MoveDecision, MoveDecision)> {
+    Ok((
+        choose_move(fen, intact_rates, intact)?,
+        choose_move(fen, intact_rates, permuted)?,
     ))
 }

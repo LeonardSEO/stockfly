@@ -20,3 +20,4 @@ stockfly-chess = { path = "../stockfly-chess" }
 stockfly-plasticity = { path = "../stockfly-plasticity" }
 serde.workspace = true
 serde_json.workspace = true
+sha2 = "0.10"

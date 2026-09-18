@@ -2,6 +2,7 @@
 //! with zero state and identical calibration; reset omits learned weights.
 pub mod ablation;
 pub mod bypass;
+pub mod hashes;
 pub mod output_permutation;
 pub mod reset;
 pub mod shuffle;
@@ -352,14 +353,15 @@ pub fn evaluate_causal_controls(
                 ablation.step(&mut ablated, &stimulus);
             }
 
-            let intact_decision = choose_move(&position.fen, &intact.state().rate, output)?;
+            let (intact_decision, output_permuted_decision) = output_permutation::paired_decisions(
+                &position.fen,
+                &intact.state().rate,
+                output,
+                &permuted_output,
+            )?;
             let reset_decision = choose_move(&position.fen, &reset.state().rate, output)?;
             let shuffled_decision = choose_move(&position.fen, &shuffled.state().rate, output)?;
             let ablated_decision = choose_move(&position.fen, &ablated.state().rate, output)?;
-            // This consumes the exact intact neural activity with only the
-            // fixed square labels reassigned in the derived output map.
-            let output_permuted_decision =
-                choose_move(&position.fen, &intact.state().rate, &permuted_output)?;
             let bypass_rates = bypass::random_readout_rates(
                 &stimulus,
                 output,
@@ -562,6 +564,14 @@ pub fn run_causal_cli(args: impl Iterator<Item = String>) -> Result<String> {
         .get("--chess-dir")
         .map(String::as_str)
         .unwrap_or("crates/stockfly-chess/resources");
+    let input_hashes = hashes::input_hashes(
+        graph_path,
+        model,
+        suite_path,
+        chess,
+        metadata_path,
+        std::env::current_exe()?,
+    )?;
     let checkpoint: Checkpoint = serde_json::from_slice(&fs::read(model)?)?;
     let suite: Suite = serde_json::from_slice(&fs::read(suite_path)?)?;
     let metadata: AuditMetadata = serde_json::from_slice(&fs::read(metadata_path)?)?;
@@ -615,6 +625,17 @@ pub fn run_causal_cli(args: impl Iterator<Item = String>) -> Result<String> {
         })
         .collect();
     let all_rows: Vec<_> = trials.iter().collect();
+    let after_hashes = hashes::input_hashes(
+        graph_path,
+        model,
+        suite_path,
+        chess,
+        metadata_path,
+        std::env::current_exe()?,
+    )?;
+    if input_hashes != after_hashes {
+        return Err("audit inputs changed during evaluation; refusing to emit report".into());
+    }
     Ok(serde_json::to_string_pretty(&serde_json::json!({
         "report_version": 1,
         "control_set": "causal-controls-v1",
@@ -631,6 +652,7 @@ pub fn run_causal_cli(args: impl Iterator<Item = String>) -> Result<String> {
             "output_sha256": output.sha256(),
         },
         "metadata_source": metadata.source,
+        "inputs": input_hashes,
         "checkpoint_delta_edges": checkpoint.deltas.len(),
         "calibration": {
             "dt_ms": config.dt_ms,
@@ -651,7 +673,7 @@ pub fn run_causal_cli(args: impl Iterator<Item = String>) -> Result<String> {
             "The shuffled graph preserves exact fan-in counts and the global out-degree distribution; individual source degree is matched only within logarithmic bins.",
             "Population ablation measures only the selected MaleCNS superclass annotation value; it is not anatomical-region ranking.",
             "The brain bypass is a fixed random sensory readout baseline and is not trained.",
-            "Version-1 checkpoints do not bind edge-block hashes or calibration; external report tooling must hash actual inputs.",
+            "Version-1 checkpoints do not bind edge-block hashes or calibration; this report hashes the actual evaluated files and records calibration separately.",
             "Trace replay and Elo measurement are separate audit tasks and are not evaluated here."
         ],
     }))?)

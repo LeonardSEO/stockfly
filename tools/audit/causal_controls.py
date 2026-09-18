@@ -44,13 +44,14 @@ def main():
     if result.returncode:
         raise RuntimeError(result.stderr.strip())
     report = json.loads(result.stdout)
+    if report.get('inputs') != before:
+        raise ValueError('native audit input hashes disagree with wrapper verification')
     after = input_hashes(
         args.graph, args.model, args.suite, args.chess_dir, args.binary
     )
     after['metadata_sha256'] = sha256(args.metadata)
     if before != after:
         raise ValueError('audit inputs changed during evaluation; refusing to publish report')
-    report['inputs'] = before
     args.out.parent.mkdir(parents=True, exist_ok=True)
     with args.out.open('x') as target:
         json.dump(report, target, indent=2)
