@@ -31,7 +31,7 @@ def copy_tree(source, target):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--without-models', action='store_true', help='Build a download-first runtime; fetching needs an existing published model release')
-    parser.add_argument('--out', type=Path, default=ROOT / 'dist/releases')
+    parser.add_argument('--out', type=Path, default=ROOT / 'dist/releases', help='Output directory within this repository\'s dist/ tree (required for workspace dependency resolution)')
     parser.add_argument('--stockfish-source-archive', type=Path, help='Reuse an already downloaded upstream source archive (hash still checked)')
     args = parser.parse_args()
     system, machine = platform.system(), platform.machine().lower()
@@ -42,6 +42,8 @@ def main():
     else:
         raise SystemExit('Supported local packaging hosts: macOS arm64 or Windows x64')
     out = args.out.resolve()
+    if not out.is_relative_to(ROOT.resolve() / 'dist'):
+        raise SystemExit('--out must be inside this repository\'s dist/ directory so the staged app can resolve workspace node_modules')
     out.mkdir(parents=True, exist_ok=True)
     # Each run owns a new directory, preserving previous builds and active Vite files.
     stage = Path(tempfile.mkdtemp(prefix=f'{name}-', dir=out))

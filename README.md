@@ -61,7 +61,7 @@ cargo install wasm-pack --version 0.13.1 --locked
 # Windows PowerShell: .\scripts\package-local.ps1 --without-models
 ```
 
-This single command builds WASM, Vite web assets and the native server in isolated staging under `dist/releases/`, materializes approved runtime files, and produces a ZIP with no external symlinks. It verifies the pinned Stockfish browser binaries and corresponding v19.0.0 source archive, reusing local files when available. It does not change the development catalog or generated development WASM. The GitHub workflow builds CI artifacts only; it neither creates nor uploads GitHub Releases.
+This single command builds WASM, Vite web assets and the native server in isolated staging under `dist/releases/`, materializes approved runtime files, and produces a ZIP with no external symlinks. It verifies the pinned Stockfish browser binaries and corresponding v19.0.0 source archive, reusing local files when available. It does not change the development catalog or generated development WASM. Custom `--out` directories must remain inside this repository's `dist/` directory, where the staged app can resolve the installed workspace dependencies. The GitHub workflow builds CI artifacts only; it neither creates nor uploads GitHub Releases.
 
 For a bundle with locally prepared models, omit `--without-models`. This requires `data/compiled/malecns-v1`, `data/browser`, the selected `data/browser-models/catalog.json`, and the audit/training/ladder artifacts named in `scripts/package-local.py`. The package preserves the catalog's exact checkpoint selection using copy mode. Current Max is the quick run, not the older smoke checkpoint under `data/checkpoints`.
 
@@ -69,12 +69,16 @@ For development, an authorized published release can populate a fresh clone with
 
 ```sh
 node tools/models/fetch-release.mjs --tag EXISTING_TAG
+# The release uses data/browser-models; keep the tracked legacy public link valid.
+mkdir -p data/checkpoints
+# Prepare the pinned browser opponent, source archive and license files before Vite.
+npm run assets:stockfish --workspace apps/web
 wasm-pack build crates/stockfly-wasm --target web --release --out-dir ../../apps/web/src/wasm-gen
 npm run build --workspace apps/web
 cargo run --release -p stockfly-server -- --open
 ```
 
-The source wrapper uses the native server installer, compiling it when necessary. A published model release is not yet available as part of this work. To reproduce data from upstream instead, use the existing [MaleCNS compiler](tools/malecns/compile.py), [geometry exporter](tools/malecns/geometry.py), and [browser metadata/model preparation instructions](tools/browser/README.md). Raw MaleCNS data never enters portable or model release artifacts. Fixed chess maps are tracked source files and do not need regeneration for an ordinary build.
+The installer supplies the graph, browser metadata, maps and content-addressed model catalog/checkpoints. The empty legacy `data/checkpoints` directory only resolves its tracked public symlink; it does not duplicate or substitute a model. The Stockfish preparation command verifies its pinned assets. To reuse an existing offline cache, append `-- --source-dir /path/to/prepared-stockfish --offline` to that npm command. Together these steps resolve every tracked `public/vendor` symlink before Vite copies public files. The source wrapper uses the native server installer, compiling it when necessary. A published model release is not yet available as part of this work. To reproduce data from upstream instead, use the existing [MaleCNS compiler](tools/malecns/compile.py), [geometry exporter](tools/malecns/geometry.py), and [browser metadata/model preparation instructions](tools/browser/README.md). Raw MaleCNS data never enters portable or model release artifacts. Fixed chess maps are tracked source files and do not need regeneration for an ordinary build.
 
 ## Prepare a model release locally
 
