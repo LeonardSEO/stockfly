@@ -29,6 +29,7 @@ const UCI_MOVE = /^[a-h][1-8][a-h][1-8][qrbn]?$/;
  */
 export class StockfishBridge {
   private port: EnginePort | null = null;
+  private portEpoch = 0;
   private ready = false;
   private searching = false;
   private pending: StockfishSearch | null = null;
@@ -52,7 +53,8 @@ export class StockfishBridge {
     this.stopEngine();
   }
 
-  handleEngineOutput(output: unknown): void {
+  private handleEngineOutput(output: unknown, port: EnginePort, epoch: number): void {
+    if (port !== this.port || epoch !== this.portEpoch) return;
     if (typeof output !== "string") return;
     for (const line of output.split(/\r?\n/)) {
       const trimmed = line.trim();
@@ -76,9 +78,11 @@ export class StockfishBridge {
   private ensureEngine(): void {
     if (this.port) return;
     const port = this.createPort();
+    const epoch = ++this.portEpoch;
     this.port = port;
-    port.addEventListener("message", event => this.handleEngineOutput(event.data));
+    port.addEventListener("message", event => this.handleEngineOutput(event.data, port, epoch));
     port.addEventListener("error", event => {
+      if (port !== this.port || epoch !== this.portEpoch) return;
       const request = this.pending;
       this.emit({
         type: "error",
@@ -100,10 +104,12 @@ export class StockfishBridge {
   }
 
   private stopEngine(): void {
-    this.port?.terminate();
+    const port = this.port;
     this.port = null;
+    this.portEpoch++;
     this.ready = false;
     this.searching = false;
+    port?.terminate();
   }
 }
 

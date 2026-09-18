@@ -17,6 +17,7 @@ class FakeEngine {
   }
   terminate(): void { this.terminated = true; }
   line(data: unknown): void { this.messageListener?.({ data } as MessageEvent<unknown>); }
+  fail(message: string): void { this.errorListener?.({ message } as ErrorEvent); }
 }
 
 test("Stockfish worker boundary drops evaluation and PV and emits only bestmove", () => {
@@ -41,6 +42,27 @@ test("Stockfish reset terminates the search and discards its stale bestmove", ()
   engine.line("bestmove d2d4");
   assert.equal(engine.terminated, true);
   assert.deepEqual(emitted, []);
+});
+
+test("replaced Stockfish port cannot relabel stale moves or errors as the new request", () => {
+  const first = new FakeEngine();
+  const second = new FakeEngine();
+  const engines = [first, second];
+  const emitted: StockfishResponse[] = [];
+  const bridge = new StockfishBridge(() => engines.shift()!, message => emitted.push(message));
+
+  bridge.search({ type: "search", fen: "old-fen", generation: 8, requestId: "old" });
+  first.line("uciok\nreadyok");
+  bridge.search({ type: "search", fen: "new-fen", generation: 9, requestId: "new" });
+  assert.equal(first.terminated, true);
+
+  first.line("bestmove a2a4");
+  first.fail("late failure from replaced worker");
+  assert.deepEqual(emitted, []);
+
+  second.line("uciok\nreadyok");
+  second.line("info score cp 12 pv e2e4 e7e5\nbestmove e2e4");
+  assert.deepEqual(emitted, [{ type: "move", uci: "e2e4", generation: 9, requestId: "new" }]);
 });
 
 test("controllers route human and engine turns and pause exactly after one stepped ply", () => {
