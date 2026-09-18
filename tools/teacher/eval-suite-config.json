@@ -1,0 +1,13 @@
+{
+  "stages": {
+    "legal": { "share": 0.1667, "nodes": 250 },
+    "capture": { "share": 0.1667, "nodes": 250 },
+    "check-evasion": { "share": 0.1667, "nodes": 500 },
+    "mate1": { "share": 0.1667, "nodes": 500 },
+    "endgame": { "share": 0.1667, "nodes": 1000 },
+    "mixed": { "share": 0.1665, "nodes": 2000 }
+  },
+  "presets": {
+    "eval": { "total_examples": 180, "wall_clock_seconds": 1800 }
+  }
+}
