@@ -52,6 +52,18 @@ async function loadEngine() {
 
   engine = new StockFlyEngine(manifestText, neurons, offsets, edgeSrc, edgeWeight, sensoryJson, outputJson);
 
+  // Best-effort: a fresh clone with no checkpoint fetched yet still plays
+  // (as the untrained Stage-0 baseline) rather than failing to load.
+  try {
+    const checkpointRes = await fetch("/vendor/checkpoints/stockfly-bio-full.sfckpt");
+    if (checkpointRes.ok) {
+      const checkpointJson = await checkpointRes.text();
+      engine.load_checkpoint(checkpointJson);
+    }
+  } catch {
+    // No checkpoint available yet -- play as the untrained baseline.
+  }
+
   post({
     type: "loaded",
     manifest: {

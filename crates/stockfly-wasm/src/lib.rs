@@ -19,12 +19,21 @@ use stockfly_chess::policy::choose_move;
 use stockfly_chess::sensory::{encode_position, SensoryMap};
 use stockfly_connectome::Connectome;
 use stockfly_sim::{CpuSimulator, SimConfig, Simulator};
+use stockfly_train::checkpoint::Checkpoint;
 
 #[wasm_bindgen]
 pub struct StockFlyEngine {
     connectome: Connectome,
     sensory_map: SensoryMap,
     output_map: OutputMap,
+    /// Working weights (compiled base magnitude * SimConfig::weight_scale,
+    /// matching exactly what the native trainer computed its checkpoint
+    /// deltas against). Starts as the untrained baseline; `load_checkpoint`
+    /// overwrites the edges a checkpoint touched.
+    weights: Vec<f32>,
+    /// Human-readable label for whichever checkpoint (if any) is loaded,
+    /// shown in the UI's model badge.
+    model_label: String,
 }
 
 #[derive(Serialize)]
@@ -40,6 +49,7 @@ struct InferResponse {
     settle_steps: u32,
     neuron_count: usize,
     edge_count: usize,
+    model_label: String,
 }
 
 #[wasm_bindgen]
@@ -71,10 +81,15 @@ impl StockFlyEngine {
         let sensory_map = SensoryMap::load_str(sensory_map_json).map_err(|e| js_err(e.to_string()))?;
         let output_map = OutputMap::load_str(output_map_json).map_err(|e| js_err(e.to_string()))?;
 
+        let weight_scale = SimConfig::default().weight_scale;
+        let weights = connectome.edge_weight.iter().map(|w| w * weight_scale).collect();
+
         Ok(StockFlyEngine {
             connectome,
             sensory_map,
             output_map,
+            weights,
+            model_label: "untrained baseline".to_string(),
         })
     }
 
@@ -84,6 +99,22 @@ impl StockFlyEngine {
 
     pub fn edge_count(&self) -> usize {
         self.connectome.edge_src.len()
+    }
+
+    pub fn model_label(&self) -> String {
+        self.model_label.clone()
+    }
+
+    /// Applies a trained checkpoint's deltas onto this engine's working
+    /// weights. Returns the number of edges the checkpoint actually
+    /// touched. The compiled base graph itself is never mutated -- this
+    /// only changes `self.weights`, the same design as the native
+    /// trainer's `Checkpoint::apply_to`.
+    pub fn load_checkpoint(&mut self, checkpoint_json: &str) -> Result<usize, JsValue> {
+        let checkpoint: Checkpoint = serde_json::from_str(checkpoint_json).map_err(|e| js_err(e.to_string()))?;
+        let touched = checkpoint.apply_to(&mut self.weights);
+        self.model_label = checkpoint.model_kind.clone();
+        Ok(touched)
     }
 
     /// Runs the full encode -> settle -> decide pipeline for one position
@@ -100,6 +131,7 @@ impl StockFlyEngine {
             ..SimConfig::default()
         };
         let mut sim = CpuSimulator::new(&self.connectome, config);
+        sim.weights_mut().copy_from_slice(&self.weights);
         for _ in 0..settle_steps {
             sim.step(&stimulus);
         }
@@ -128,6 +160,7 @@ impl StockFlyEngine {
             settle_steps,
             neuron_count,
             edge_count: self.connectome.edge_src.len(),
+            model_label: self.model_label.clone(),
         };
 
         serde_json::to_string(&response).map_err(|e| js_err(e.to_string()))

@@ -5,6 +5,10 @@ edition.workspace = true
 license.workspace = true
 repository.workspace = true
 
+[lib]
+name = "stockfly_train"
+path = "src/lib.rs"
+
 [[bin]]
 name = "stockfly-train"
 path = "src/main.rs"

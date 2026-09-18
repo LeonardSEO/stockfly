@@ -34,6 +34,14 @@ fn binary_path() -> PathBuf {
     PathBuf::from(env!("CARGO_BIN_EXE_stockfly-train"))
 }
 
+fn strip_timing_lines(output: &str) -> String {
+    output
+        .lines()
+        .filter(|l| !l.starts_with("load_time_ms:") && !l.starts_with("settle_time_ms:"))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
 fn path_without_stockfish() -> String {
     let original = env::var("PATH").unwrap_or_default();
     env::split_paths(&original)
@@ -71,9 +79,13 @@ fn inference_is_identical_with_stockfish_reachable_or_removed_from_path() {
         assert!(with_stockfish.status.success(), "inference failed with stockfish present for {fen}");
         assert!(without_stockfish.status.success(), "inference failed with stockfish ABSENT for {fen} -- this would mean it was depended on");
 
+        // Compare everything except wall-clock timing lines, which are
+        // expected to vary run-to-run and carry no causal information --
+        // the decision, hashes, and neural readouts are what this audit
+        // is actually checking.
         assert_eq!(
-            String::from_utf8_lossy(&with_stockfish.stdout),
-            String::from_utf8_lossy(&without_stockfish.stdout),
+            strip_timing_lines(&String::from_utf8_lossy(&with_stockfish.stdout)),
+            strip_timing_lines(&String::from_utf8_lossy(&without_stockfish.stdout)),
             "inference output differed depending on Stockfish's presence on PATH for {fen}"
         );
     }

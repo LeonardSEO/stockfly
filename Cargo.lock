@@ -525,6 +525,7 @@ dependencies = [
  "stockfly-chess",
  "stockfly-connectome",
  "stockfly-sim",
+ "stockfly-train",
  "wasm-bindgen",
 ]
 

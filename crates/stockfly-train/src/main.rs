@@ -1,6 +1,4 @@
-mod checkpoint;
-mod presets;
-mod train;
+use stockfly_train::{checkpoint, presets, train};
 
 use std::env;
 use std::fs;
