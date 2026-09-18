@@ -22,3 +22,19 @@ npx tsc --noEmit --target ES2022 --module ESNext --moduleResolution bundler --li
 ```
 
 Build WASM first after changing the binding; then `npm run build --workspace apps/web`. The application reports missing geometry separately from engine load failures. A checkpoint 404 explicitly loads the untrained baseline; other checkpoint errors stop model loading.
+
+## Stockfish exhibition engine
+
+The Stockfish vs Fly mode uses the official Stockfish.js 19.0.0 Lite single-thread build. Populate the ignored local cache from the pinned release and verify every SHA-256 before building:
+
+```sh
+npm run assets:stockfish --workspace apps/web
+```
+
+For an offline preparation, pass an existing asset directory to the tool:
+
+```sh
+python3 tools/browser/fetch_stockfish.py --source-dir /path/to/stockfish-assets --offline
+```
+
+The generated `data/vendor/stockfish-19-lite` directory contains the exact source URLs, hashes, attribution notice, and upstream GPL text. `apps/web/public/vendor/stockfish` is a tracked symlink to that cache. Evaluation scores and principal variations remain inside the isolated Stockfish worker; the application receives only a validated best move.

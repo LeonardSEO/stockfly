@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "assets:stockfish": "python3 ../../tools/browser/fetch_stockfish.py"
   },
   "dependencies": {
     "chess.js": "^1.4.0",

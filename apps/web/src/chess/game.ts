@@ -1,7 +1,15 @@
 import { Chess, type Square } from "chess.js";
 
+export type GameTermination =
+  | { outcome: "win"; winner: "w" | "b"; reason: "checkmate" }
+  | { outcome: "draw"; reason: "stalemate" | "insufficient material" | "threefold repetition" | "fifty-move rule" };
+
 export class Game {
-  private chess = new Chess();
+  private chess: Chess;
+
+  constructor(fen?: string) {
+    this.chess = new Chess(fen);
+  }
 
   fen(): string {
     return this.chess.fen();
@@ -32,9 +40,19 @@ export class Game {
   history(): string[] { return this.chess.history(); }
 
   result(): string | null {
-    if (this.chess.isCheckmate()) return `${this.turn() === "w" ? "Black" : "White"} wins by checkmate.`;
-    if (this.chess.isStalemate()) return "Draw by stalemate.";
-    if (this.chess.isDraw()) return "Draw.";
+    const ending = this.termination();
+    if (!ending) return null;
+    if (ending.outcome === "win") return `${ending.winner === "w" ? "White" : "Black"} wins by checkmate.`;
+    return `Draw by ${ending.reason}.`;
+  }
+
+  termination(): GameTermination | null {
+    if (this.chess.isCheckmate()) return { outcome: "win", winner: this.turn() === "w" ? "b" : "w", reason: "checkmate" };
+    // Keep chess.js draw precedence when more than one terminal condition holds.
+    if (this.chess.isDrawByFiftyMoves()) return { outcome: "draw", reason: "fifty-move rule" };
+    if (this.chess.isStalemate()) return { outcome: "draw", reason: "stalemate" };
+    if (this.chess.isInsufficientMaterial()) return { outcome: "draw", reason: "insufficient material" };
+    if (this.chess.isThreefoldRepetition()) return { outcome: "draw", reason: "threefold repetition" };
     return null;
   }
 
