@@ -96,22 +96,15 @@ impl Connectome {
         let dir = path.as_ref();
 
         let manifest_bytes = fs::read(dir.join("manifest.json"))?;
-        let manifest: CompiledManifest = serde_json::from_slice(&manifest_bytes)?;
 
         let neurons_bytes = fs::read(dir.join("neurons.bin"))?;
-        let neurons: Vec<NeuronRecord> = read_u64_le_vec(&neurons_bytes)
-            .into_iter()
-            .map(|body_id| NeuronRecord { body_id })
-            .collect();
-
         let offsets_bytes = fs::read(dir.join("offsets.bin"))?;
-        let offsets = read_u64_le_vec(&offsets_bytes);
 
-        let mut edge_src = Vec::with_capacity(manifest.edge_count as usize);
-        let mut edge_weight = Vec::with_capacity(manifest.edge_count as usize);
-
+        let manifest: CompiledManifest = serde_json::from_slice(&manifest_bytes)?;
         let mut sorted_blocks = manifest.edge_blocks.clone();
         sorted_blocks.sort_by_key(|b| b.index);
+
+        let mut edge_blocks = Vec::with_capacity(sorted_blocks.len());
         for block in &sorted_blocks {
             let src_path = dir
                 .join("edge_src_blocks")
@@ -119,8 +112,39 @@ impl Connectome {
             let weight_path = dir
                 .join("edge_weight_blocks")
                 .join(format!("{:04}.bin", block.index));
-            edge_src.extend(read_u32_le_vec(&fs::read(src_path)?));
-            edge_weight.extend(read_f32_le_vec(&fs::read(weight_path)?));
+            edge_blocks.push((fs::read(src_path)?, fs::read(weight_path)?));
+        }
+
+        Self::from_parts(
+            manifest,
+            &neurons_bytes,
+            &offsets_bytes,
+            edge_blocks.iter().map(|(s, w)| (s.as_slice(), w.as_slice())),
+        )
+    }
+
+    /// Builds a `Connectome` directly from in-memory byte buffers, with no
+    /// filesystem access -- used by the browser/WASM binding, which
+    /// receives these same compiled artifacts over HTTP instead of from
+    /// disk. `edge_blocks` must be in block-index order (as fetched); this
+    /// does not re-sort them, unlike `open`.
+    pub fn from_parts<'a>(
+        manifest: CompiledManifest,
+        neurons_bytes: &[u8],
+        offsets_bytes: &[u8],
+        edge_blocks: impl IntoIterator<Item = (&'a [u8], &'a [u8])>,
+    ) -> Result<Self> {
+        let neurons: Vec<NeuronRecord> = read_u64_le_vec(neurons_bytes)
+            .into_iter()
+            .map(|body_id| NeuronRecord { body_id })
+            .collect();
+        let offsets = read_u64_le_vec(offsets_bytes);
+
+        let mut edge_src = Vec::with_capacity(manifest.edge_count as usize);
+        let mut edge_weight = Vec::with_capacity(manifest.edge_count as usize);
+        for (src_bytes, weight_bytes) in edge_blocks {
+            edge_src.extend(read_u32_le_vec(src_bytes));
+            edge_weight.extend(read_f32_le_vec(weight_bytes));
         }
 
         Ok(Connectome {

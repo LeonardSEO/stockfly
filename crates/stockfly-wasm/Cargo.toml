@@ -1,0 +1,17 @@
+[package]
+name = "stockfly-wasm"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+stockfly-connectome = { path = "../stockfly-connectome" }
+stockfly-sim = { path = "../stockfly-sim" }
+stockfly-chess = { path = "../stockfly-chess" }
+serde.workspace = true
+serde_json.workspace = true
+wasm-bindgen = "0.2"
