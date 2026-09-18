@@ -4,7 +4,7 @@
 
 StockFly simulates the compiled Janelia MaleCNS v1.0 graph: **165,122 neurons and 25,563,197 edges**. Fixed chess inputs drive sensory populations; fixed neural readouts score legal moves. The browser displays sampled activity from that simulation. It runs locally, using WebGPU where available and CPU/WASM fallback when GPU initialization or inference fails.
 
-**Status, 18 September 2026:** the browser application, two trained Full models, native GPU inference, causal controls, actual match benchmark, and local release automation are implemented. Both models **failed the scientific causal acceptance gate**. All 440 measured games were checkmate losses. This is an experimental runtime, not a validated strong chess engine. No GitHub Release was published during this work.
+**Status, 18 September 2026:** the browser application, two trained Full models, native GPU inference, causal controls, actual match benchmark, and local release automation are implemented. Both models **failed the scientific causal acceptance gate**. All 440 measured games were checkmate losses. This is an experimental runtime, not a validated strong chess engine. The verified assets and macOS arm64 runtime are published in the [v0.1.0 experimental prerelease](https://github.com/LeonardSEO/stockfly/releases/tag/v0.1.0-experimental).
 
 ## Models and measured results
 
@@ -68,7 +68,7 @@ For a bundle with locally prepared models, omit `--without-models`. This require
 For development, an authorized published release can populate a fresh clone without training:
 
 ```sh
-node tools/models/fetch-release.mjs --tag EXISTING_TAG
+node tools/models/fetch-release.mjs --tag v0.1.0-experimental
 # The release uses data/browser-models; keep the tracked legacy public link valid.
 mkdir -p data/checkpoints
 # Prepare the pinned browser opponent, source archive and license files before Vite.
@@ -78,7 +78,7 @@ npm run build --workspace apps/web
 cargo run --release -p stockfly-server -- --open
 ```
 
-The installer supplies the graph, browser metadata, maps and content-addressed model catalog/checkpoints. The empty legacy `data/checkpoints` directory only resolves its tracked public symlink; it does not duplicate or substitute a model. The Stockfish preparation command verifies its pinned assets. To reuse an existing offline cache, append `-- --source-dir /path/to/prepared-stockfish --offline` to that npm command. Together these steps resolve every tracked `public/vendor` symlink before Vite copies public files. The source wrapper uses the native server installer, compiling it when necessary. A published model release is not yet available as part of this work. To reproduce data from upstream instead, use the existing [MaleCNS compiler](tools/malecns/compile.py), [geometry exporter](tools/malecns/geometry.py), and [browser metadata/model preparation instructions](tools/browser/README.md). Raw MaleCNS data never enters portable or model release artifacts. Fixed chess maps are tracked source files and do not need regeneration for an ordinary build.
+The installer supplies the graph, browser metadata, maps and content-addressed model catalog/checkpoints from the experimental release. The empty legacy `data/checkpoints` directory only resolves its tracked public symlink; it does not duplicate or substitute a model. The Stockfish preparation command verifies its pinned assets. To reuse an existing offline cache, append `-- --source-dir /path/to/prepared-stockfish --offline` to that npm command. Together these steps resolve every tracked `public/vendor` symlink before Vite copies public files. The source wrapper uses the native server installer, compiling it when necessary. To reproduce data from upstream instead, use the existing [MaleCNS compiler](tools/malecns/compile.py), [geometry exporter](tools/malecns/geometry.py), and [browser metadata/model preparation instructions](tools/browser/README.md). Raw MaleCNS data never enters portable or model release artifacts. Fixed chess maps are tracked source files and do not need regeneration for an ordinary build.
 
 ## Prepare a model release locally
 
@@ -89,7 +89,7 @@ node tools/models/publish-release.mjs --tag v0.1.0-experimental \
   --input dist/releases/BUILD_DIRECTORY/stockfly --out dist/model-release-v0.1.0-experimental
 ```
 
-The default is a local dry run. It writes content-addressed assets and `release-manifest.json` with each file's SHA-256, byte size, model kind, graph identity, training preset and attribution. The manifest retains **experimental / causal failed / Lite blocked** status and includes measured evidence. It refuses uncatalogued checkpoints, mismatched graph/checkpoint identities, symlinks and output reuse. An explicit `--publish` invokes `gh release create --prerelease`; publication is a separate authorized action, and has not been executed. Runtime ZIPs remain separate CI/local artifacts until explicitly uploaded.
+The default is a local dry run. It writes content-addressed assets and `release-manifest.json` with each file's SHA-256, byte size, model kind, graph identity, training preset and attribution. The manifest retains **experimental / causal failed / Lite blocked** status and includes measured evidence. It refuses uncatalogued checkpoints, mismatched graph/checkpoint identities, symlinks and output reuse. An explicit `--publish` invokes `gh release create --prerelease`. This was used for `v0.1.0-experimental`; its verified macOS arm64 runtime ZIP was uploaded as an additional release asset. Future publication remains a separate explicit action.
 
 Focused verification:
 
