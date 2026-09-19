@@ -1,0 +1,31 @@
+{
+  "protocol_version": 1,
+  "settle_steps": 16,
+  "recorded_steps": "every step from 1 through 16",
+  "tolerances": {
+    "activation_atol": 0.0001,
+    "activation_rtol": 0.00002,
+    "policy_atol": 0.0001,
+    "policy_rtol": 0.00002,
+    "rule": "abs(cpu-gpu) <= atol + rtol * max(abs(cpu), abs(gpu)); all values finite; selected UCI identical",
+    "rationale": "Declared before measurement. f32 epsilon is about 1.19e-7; 2e-5 permits about 168 epsilon of relative drift through ordered high-fan-in reductions and 16 recurrent steps. The 1e-4 absolute floor covers near-zero cancellation. Rates are capped at 20, so allowed rate error is at most 0.0005. Membrane is unbounded, hence a relative term. Policy uses the same stringent rule; exact move identity remains independently mandatory. These are acceptance limits, not a claim that all f32 evaluation orders must meet them."
+  },
+  "models": [
+    {"id":"bio-standard-seed45","path":"data/training-runs/bio-standard-seed45-2026-09-18/stockfly-bio-full-standard-seed45.sfckpt","sha256":"5e2094743fe960f307d4a39647afbd05682e47867f3a4e771a24f9634d01b3c5"},
+    {"id":"max-standard-seed43","path":"data/training-runs/max-standard-seed43-2026-09-18/stockfly-max-full-standard-seed43.sfckpt","sha256":"a10de3f743ba9b0a2f590ba2a19fae794c0da615facd54e1b88d1595cd1c0bd3"}
+  ],
+  "positions": [
+    {"id":"initial-white","fen":"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"},
+    {"id":"initial-black","fen":"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1"},
+    {"id":"kiwipete-tactical-castling","fen":"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1"},
+    {"id":"open-castling-black","fen":"r3k2r/8/8/8/8/8/8/R3K2R b KQkq - 0 1"},
+    {"id":"en-passant-white","fen":"4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 1"},
+    {"id":"en-passant-black","fen":"4k3/8/8/8/3Pp3/8/8/4K3 b - d3 0 1"},
+    {"id":"promotion-white","fen":"4k3/P7/8/8/8/8/7p/4K3 w - - 0 1"},
+    {"id":"promotion-black","fen":"4k3/P7/8/8/8/8/7p/4K3 b - - 0 1"},
+    {"id":"check-evasion","fen":"4k3/8/8/8/8/8/4r3/4K3 w - - 0 1"},
+    {"id":"pawn-endgame","fen":"8/5pk1/6p1/8/3P4/5K2/8/8 w - - 17 50"},
+    {"id":"rook-endgame","fen":"8/8/4k3/7r/R7/4K3/8/8 b - - 80 70"},
+    {"id":"closed-middlegame","fen":"r1bq1rk1/ppp1bppp/2np1n2/4p3/2B1P3/2NP1N2/PPP2PPP/R1BQ1RK1 w - - 4 7"}
+  ]
+}

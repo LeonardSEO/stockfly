@@ -33,7 +33,8 @@ fn gather(@builtin(global_invocation_id) global_id: vec3<u32>) {
     var input = 0.0;
     for (var edge_index = start; edge_index < end; edge_index += 1u) {
         let edge = edges[edge_index];
-        input += edge.weight * previous_state[edge.src].rate;
+        // Match CpuSimulator::mul_add explicitly instead of relying on contraction.
+        input = fma(edge.weight, previous_state[edge.src].rate, input);
     }
     gathered_state[params.dst_start + local_dst].membrane = input;
 }

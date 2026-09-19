@@ -57,10 +57,6 @@ fn gpu_matches_cpu_fixture() {
     let mut stimulus = Stimulus::zeroed(connectome.neurons.len());
     stimulus.values[0] = 0.9;
     stimulus.values[3] = 0.15;
-    for _ in 0..config.settle_steps {
-        cpu.step(&stimulus);
-    }
-
     let mut gpu = GpuSimulator::new_with_weights(
         &connectome,
         config,
@@ -73,8 +69,36 @@ fn gpu_matches_cpu_fixture() {
         "metal",
         "test must exercise the real Metal backend"
     );
+    for step in 1..=config.settle_steps {
+        cpu.step(&stimulus);
+        gpu.run_steps(&stimulus, 1).expect("run Metal simulation");
+        for (field, left, right) in [
+            ("membrane", &cpu.state().membrane, &gpu.state().membrane),
+            ("rate", &cpu.state().rate, &gpu.state().rate),
+        ] {
+            for (neuron, (&cpu, &gpu)) in left.iter().zip(right).enumerate() {
+                let allowed = 1e-4 + 2e-5 * cpu.abs().max(gpu.abs());
+                assert!(
+                    cpu.is_finite() && gpu.is_finite() && (cpu - gpu).abs() <= allowed,
+                    "step {step} neuron {neuron} {field}: CPU={cpu} GPU={gpu} allowed={allowed}"
+                );
+            }
+        }
+    }
+    let incremental = gpu.state().clone();
+    gpu.reset_state();
     gpu.run_steps(&stimulus, config.settle_steps)
-        .expect("run Metal simulation");
+        .expect("run batched Metal simulation");
+    assert_eq!(
+        incremental.membrane,
+        gpu.state().membrane,
+        "reset/batched membrane differs"
+    );
+    assert_eq!(
+        incremental.rate,
+        gpu.state().rate,
+        "reset/batched rates differ"
+    );
 
     let max_abs_rate_difference = cpu
         .state()

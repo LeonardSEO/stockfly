@@ -23,8 +23,8 @@ fn step(@builtin(global_invocation_id) global_id: vec3<u32>) {
     }
 
     let gathered_input = next_state[neuron].membrane;
-    let membrane = previous_state[neuron].membrane * params.decay
-        + gathered_input
+    // One rounding for decay plus recurrent input, then sensory addition.
+    let membrane = fma(previous_state[neuron].membrane, params.decay, gathered_input)
         + stimulus[neuron];
     let rate = clamp(membrane - params.threshold, 0.0, params.max_rate);
     next_state[neuron] = NeuronState(membrane, rate);

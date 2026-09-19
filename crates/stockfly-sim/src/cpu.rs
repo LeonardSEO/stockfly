@@ -97,10 +97,12 @@ impl<'a> CpuSimulator<'a> {
             let mut input = 0.0f32;
             for e in start..end {
                 let src = edge_src[e] as usize;
-                input += edge_weight[e] * prev_rate[src];
+                // Explicit f32 FMA matches the shader; separate rounding drifts
+                // through the recurrent graph after cancellation.
+                input = edge_weight[e].mul_add(prev_rate[src], input);
             }
             let stim = stimulus.values.get(dst).copied().unwrap_or(0.0);
-            let membrane = self.state.membrane[dst] * self.config.decay + input + stim;
+            let membrane = self.state.membrane[dst].mul_add(self.config.decay, input) + stim;
             self.state.membrane[dst] = membrane;
             self.state.rate[dst] =
                 (membrane - self.config.threshold).clamp(0.0, self.config.max_rate);
