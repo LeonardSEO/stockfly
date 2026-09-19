@@ -3,11 +3,15 @@ import assert from 'node:assert/strict';
 import { activationColor, intensity, quantize, rateAt, topNeurons, summarizeRegions } from './activation.ts';
 import { parseAnnotations, parseBodyIds, parseSomas } from './geometry.ts';
 
-test('zero rate is the background; increasing activity is monotonic and clamped', () => {
-  assert.deepEqual(activationColor(0), [0.15, 0.19, 0.16]);
+test('activation colors use the full quiet-to-active spectrum and clamp rates', () => {
+  assert.deepEqual(activationColor(0), [0.08, 0.17, 0.28]);
   assert.deepEqual(activationColor(-1), activationColor(0));
   assert.deepEqual(activationColor(25), activationColor(20));
-  for (let rate = 1; rate <= 20; rate++) activationColor(rate).forEach((channel, i) => assert.ok(channel > activationColor(rate - 1)[i]));
+  assert.deepEqual(activationColor(6), [0.08, 0.69, 0.82]);
+  assert.deepEqual(activationColor(20), [1, 0.24, 0.43]);
+  for (const rate of [0, 1, 6, 10, 14, 20]) {
+    activationColor(rate).forEach(channel => assert.ok(channel >= 0 && channel <= 1));
+  }
   assert.equal(intensity(NaN), 0);
 });
 test('quantized samples preserve actual rates within half a bin and exact top values', () => {

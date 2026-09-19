@@ -23,7 +23,18 @@ export function intensity(rate: number, maxRate = MAX_RATE): number {
 }
 export function activationColor(rate: number): [number, number, number] {
   const value = intensity(rate);
-  return [0.15 + value * 0.57, 0.19 + value * 0.71, 0.16 + value * 0.26];
+  const stops: Array<[number, [number, number, number]]> = [
+    [0, [0.08, 0.17, 0.28]],
+    [0.3, [0.08, 0.69, 0.82]],
+    [0.68, [0.95, 0.76, 0.18]],
+    [1, [1, 0.24, 0.43]],
+  ];
+  const upper = stops.findIndex(([at]) => value <= at);
+  if (upper <= 0) return stops[0][1];
+  const [fromAt, from] = stops[upper - 1];
+  const [toAt, to] = stops[upper];
+  const mix = (value - fromAt) / (toAt - fromAt);
+  return from.map((channel, index) => channel + (to[index] - channel) * mix) as [number, number, number];
 }
 export function rateAt(rates: ActivationFrame['neuronRates'] | undefined, index: number): number {
   if (!rates) return 0;

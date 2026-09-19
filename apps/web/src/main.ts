@@ -44,7 +44,7 @@ let pendingPromotion: { from: string; to: string } | null = null;
 let endgameAnnounced = false;
 
 const app = document.getElementById('app')!;
-app.innerHTML = `<nav class="sidebar" aria-label="Main navigation"><a class="brand" href="#play"><span class="brand-symbol" aria-hidden="true">♞</span>Stock<span>Fly</span></a><a class="nav-link current" href="#play"><span aria-hidden="true">▦</span> Play</a><a class="nav-link" href="#brain"><span aria-hidden="true">◉</span> Brain</a><p class="sidebar-caption">Chess, through<br>a fly’s connectome.</p><a class="asset-credit" href="/pieces/README.txt">Piece credits</a></nav>
+app.innerHTML = `<nav class="sidebar" aria-label="Main navigation"><a class="brand" href="#play"><span class="brand-symbol" aria-hidden="true">♞</span>Stock<span>Fly</span></a><a id="nav-play" class="nav-link current" href="#play" aria-current="page"><span aria-hidden="true">▦</span> Play</a><a id="nav-brain" class="nav-link" href="#brain"><span aria-hidden="true">◉</span> Brain</a><p class="sidebar-caption">Chess, through<br>a fly’s connectome.</p><a class="asset-credit" href="/pieces/README.txt">Piece credits</a></nav>
   <main id="play"><header class="page-heading"><div><p class="eyebrow">THE CONNECTOME AT PLAY</p><h1>Play StockFly</h1></div><span class="mode-label">Human vs Fly</span></header>
   <div class="workspace"><section class="board-workspace" aria-label="Chess game"><div class="player-strip" id="opponent"></div><div class="board" aria-label="Chessboard"></div><div class="player-strip" id="human"></div><p class="status game-status" role="status" aria-live="polite"></p><div class="promotion" hidden role="group" aria-label="Choose promotion"></div><section class="endgame-panel" role="dialog" aria-live="assertive" aria-labelledby="endgame-title" aria-describedby="endgame-reason" tabindex="-1" hidden><p class="eyebrow">GAME OVER</p><h2 id="endgame-title"></h2><p id="endgame-reason"></p><button id="endgame-restart" class="primary">Play again</button></section></section>
   <aside class="context"><section class="game-controls"><div class="control-heading"><h2>Your game</h2><span class="badge">Loading…</span></div><p class="muted">The fly’s neural activity chooses its move.</p><div class="model-options"><label>Trained model<select id="model" disabled><option>Loading catalog…</option></select></label></div><div class="mode-options"><label>Mode<select id="mode"><option value="human">Human vs Fly</option><option value="engine">Stockfish vs Fly</option></select></label><label><span id="side-label">Play as</span><select id="side"><option value="w">White</option><option value="b">Black</option></select></label></div><div class="game-options"><button id="new-game" class="primary" disabled>Restart</button><button id="pause" class="secondary" hidden>Pause</button><button id="step" class="secondary" hidden>One ply</button></div><button id="retry" class="primary" hidden>Retry loading</button><div class="model-summary"></div><div class="moves" aria-label="Move history"><span class="muted">Moves will appear here.</span></div><a class="engine-credit" href="/vendor/stockfish/NOTICE.txt">Stockfish source and license</a></section>
@@ -63,7 +63,20 @@ const retryButton = app.querySelector<HTMLButtonElement>('#retry')!;
 const endgamePanel = app.querySelector<HTMLElement>('.endgame-panel')!;
 const endgameTitle = app.querySelector<HTMLElement>('#endgame-title')!;
 const endgameReason = app.querySelector<HTMLElement>('#endgame-reason')!;
-const brain = new BrainView(app.querySelector('#brain')!);
+const playNav = app.querySelector<HTMLAnchorElement>('#nav-play')!;
+const brainNav = app.querySelector<HTMLAnchorElement>('#nav-brain')!;
+const setActiveNavigation = (section: 'play' | 'brain'): void => {
+  for (const [link, active] of [[playNav, section === 'play'], [brainNav, section === 'brain']] as const) {
+    link.classList.toggle('current', active);
+    if (active) link.setAttribute('aria-current', 'page'); else link.removeAttribute('aria-current');
+  }
+  window.history.replaceState(null, '', `#${section}`);
+};
+const brain = new BrainView(app.querySelector('#brain')!, expanded => setActiveNavigation(expanded ? 'brain' : 'play'));
+brainNav.onclick = event => { event.preventDefault(); brain.setExpanded(true, true); };
+playNav.onclick = event => { event.preventDefault(); brain.setExpanded(false); document.querySelector('#play')!.scrollIntoView(); };
+app.querySelector<HTMLAnchorElement>('.brand')!.onclick = event => { event.preventDefault(); brain.setExpanded(false); document.querySelector('#play')!.scrollIntoView(); };
+if (window.location.hash === '#brain') brain.setExpanded(true);
 const worker = new Worker(new URL('./engine/stockfly.worker.ts', import.meta.url), { type: 'module' });
 const post = (message: StockFlyRequest) => worker.postMessage(message);
 const stockfishWorker = new Worker(new URL('./engine/stockfish.worker.ts', import.meta.url), { type: 'module' });
@@ -144,7 +157,7 @@ function render(): void {
   retryButton.hidden = !loadFailed && !moveFailed;
   retryButton.textContent = loadFailed ? 'Retry loading' : 'Retry move';
   const summary = app.querySelector('.model-summary')!;
-  summary.innerHTML = modelInfo ? `<span class="backend-dot" aria-hidden="true"></span><strong>${escapeHtml(modelInfo.backend)}</strong><span>${modelInfo.neuronCount.toLocaleString()} neurons · ${(modelInfo.edgeCount / 1e6).toFixed(1)}M edges</span><span class="model-training">${escapeHtml(modelInfo.modelLabel)} · ${escapeHtml(modelInfo.trainingPreset)} preset · ${modelInfo.trialsRun.toLocaleString()} trials</span><small>${escapeHtml(modelInfo.adapter)}${modelInfo.fallbackReason ? `<br>CPU fallback: ${escapeHtml(modelInfo.fallbackReason)}` : ''}<br>checkpoint SHA-256 <code>${escapeHtml(modelInfo.checkpointSha256 ?? '')}</code><br>catalog asset <code>${escapeHtml(modelInfo.checkpointUrl)}</code></small>` : `<span class="muted">${loadFailed ? 'Model could not be loaded. Download pretrained model: open a terminal in the StockFly folder and run ./stockfly-server fetch-models (Windows: .\\stockfly-server.exe fetch-models), then Retry loading. No training is required. A published experimental model release must exist.' : 'Loading graph, learned weights and maps…'}</span>`;
+  summary.innerHTML = modelInfo ? `<span class="backend-dot" aria-hidden="true"></span><strong>${escapeHtml(modelInfo.backend)}</strong><span>${modelInfo.neuronCount.toLocaleString()} neurons · ${(modelInfo.edgeCount / 1e6).toFixed(1)}M edges</span><span class="model-training">${escapeHtml(modelInfo.modelLabel)} · ${escapeHtml(modelInfo.trainingPreset)} preset · ${modelInfo.trialsRun.toLocaleString()} trials</span><small>${escapeHtml(modelInfo.adapter)} · model integrity verified${modelInfo.fallbackReason ? `<br>CPU fallback: ${escapeHtml(modelInfo.fallbackReason)}` : ''}</small>` : `<span class="muted">${loadFailed ? 'Model could not be loaded. Download pretrained model: open a terminal in the StockFly folder and run ./stockfly-server fetch-models (Windows: .\\stockfly-server.exe fetch-models), then Retry loading. No training is required. A published experimental model release must exist.' : 'Loading graph, learned weights and maps…'}</span>`;
   const history = game.history();
   app.querySelector('.moves')!.innerHTML = history.length ? history.map((move, index) => `${index % 2 === 0 ? `<span class="move-number">${Math.floor(index / 2) + 1}.</span>` : ''}<span>${escapeHtml(move)}</span>`).join('') : '<span class="muted">Moves will appear here.</span>';
 }

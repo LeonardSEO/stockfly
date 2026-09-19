@@ -28,8 +28,8 @@ export class BrainView {
   private inspection: HTMLElement;
   private filters: HTMLElement;
 
-  constructor(private host: HTMLElement) {
-    host.innerHTML = `<div class="brain-toolbar"><div><h2>Inside the fly</h2><span class="eyebrow">MaleCNS · real soma locations</span></div><button type="button" class="quiet expand-brain" aria-expanded="false" aria-label="Expand brain view">⤢</button></div>
+  constructor(private host: HTMLElement, private onExpansionChange: (expanded: boolean) => void = () => {}) {
+    host.innerHTML = `<div class="brain-toolbar"><div><h2 tabindex="-1">Inside the fly</h2><span class="eyebrow">MaleCNS · real soma locations</span></div><button type="button" class="quiet expand-brain" aria-expanded="false" aria-label="Expand brain view">⤢</button></div>
       <div class="brain-viewport" aria-label="Interactive MaleCNS soma point cloud"></div>
       <p class="brain-status" role="status">Loading real neuron geometry…</p>
       <div class="brain-filters"></div><div class="brain-info"></div>
@@ -41,17 +41,21 @@ export class BrainView {
     this.top = host.querySelector('.top-neurons')!;
     this.inspection = host.querySelector('.inspection')!;
     this.viewport.after(createBrainLegend());
-    host.querySelector<HTMLButtonElement>('.expand-brain')!.onclick = event => {
-      const expanded = host.classList.toggle('expanded');
-      const button = event.currentTarget as HTMLButtonElement;
-      button.setAttribute('aria-expanded', String(expanded));
-      button.setAttribute('aria-label', expanded ? 'Collapse brain view' : 'Expand brain view');
-      button.textContent = expanded ? '×' : '⤢';
-    };
+    host.querySelector<HTMLButtonElement>('.expand-brain')!.onclick = () => this.setExpanded(!host.classList.contains('expanded'));
     host.addEventListener('keydown', event => {
       if (event.key === 'Escape' && host.classList.contains('expanded')) host.querySelector<HTMLButtonElement>('.expand-brain')!.click();
     });
     void this.initialize();
+  }
+
+  setExpanded(expanded: boolean, focusHeading = false): void {
+    this.host.classList.toggle('expanded', expanded);
+    const button = this.host.querySelector<HTMLButtonElement>('.expand-brain')!;
+    button.setAttribute('aria-expanded', String(expanded));
+    button.setAttribute('aria-label', expanded ? 'Collapse brain view' : 'Expand brain view');
+    button.textContent = expanded ? '×' : '⤢';
+    this.onExpansionChange(expanded);
+    if (expanded && focusHeading) requestAnimationFrame(() => this.host.querySelector<HTMLElement>('h2')!.focus({ preventScroll: true }));
   }
 
   private async initialize(): Promise<void> {
@@ -74,7 +78,7 @@ export class BrainView {
       this.geometry.setAttribute('denseIndex', new THREE.BufferAttribute(data.denseIndices, 1));
       this.colors = new Float32Array(positions.length);
       this.geometry.setAttribute('color', new THREE.BufferAttribute(this.colors, 3).setUsage(THREE.DynamicDrawUsage));
-      this.points = new THREE.Points(this.geometry, new THREE.PointsMaterial({ size: 0.006, vertexColors: true, transparent: true, opacity: 0.8 }));
+      this.points = new THREE.Points(this.geometry, new THREE.PointsMaterial({ size: 0.008, vertexColors: true, transparent: true, opacity: 0.9 }));
       this.scene.add(this.points);
       const markerGeometry = new THREE.BufferGeometry();
       markerGeometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(3), 3));
@@ -86,7 +90,7 @@ export class BrainView {
       this.viewport.append(this.renderer.domElement);
       this.renderer.domElement.setAttribute('aria-label', 'Rotate by dragging; zoom with scroll. Neuron inspection is also available below.');
       this.renderer.domElement.addEventListener('webglcontextlost', event => { event.preventDefault(); this.status.textContent = '3D graphics context lost. Reload the page to restore the brain view.'; });
-      this.camera.position.set(0, 0, 3.35);
+      this.camera.position.set(0, 0, 2.85);
       this.controls = new OrbitControls(this.camera, this.renderer.domElement);
       this.controls.minDistance = 0.6;
       this.controls.maxDistance = 7;
