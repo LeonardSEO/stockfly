@@ -4,7 +4,7 @@
 
 StockFly simulates the compiled Janelia MaleCNS v1.0 graph: **165,122 neurons and 25,563,197 edges**. Fixed chess inputs drive sensory populations; fixed neural readouts score legal moves. The browser displays sampled activity from that simulation. It runs locally, using WebGPU where available and CPU/WASM fallback when GPU initialization or inference fails.
 
-**Status, 19 September 2026:** the canonical catalog selects **Bio Full Standard seed 45** and **Max Full Standard seed 43**. Both **FAIL the post-FMA causal acceptance gate**. The selected models lost all **200/200** low-node ladder games by checkmate. Native Apple M4 Metal parity passes the fixed 24-case suite after the arithmetic correction. [`v0.3.0-standard`](https://github.com/LeonardSEO/stockfly/releases/tag/v0.3.0-standard) is published as an **experimental, causal-failed prerelease**. `v0.3.1-standard` is being prepared with bounded installer network waits after a blocked live connection exposed that `v0.3.0-standard` could wait indefinitely. The Windows download-first runtime/browser smoke passed on the identified CI artifact. See the [patch preparation record](docs/releases/v0.3.1-standard.md).
+**Status, 19 September 2026:** the canonical catalog selects **Bio Full Standard seed 45** and **Max Full Standard seed 43**. Both **FAIL the post-FMA causal acceptance gate**. The selected models lost all **200/200** low-node ladder games by checkmate. Native Apple M4 Metal parity passes the fixed 24-case suite after the arithmetic correction. [`v0.3.1-standard`](https://github.com/LeonardSEO/stockfly/releases/tag/v0.3.1-standard) is the current **experimental, causal-failed prerelease**, with bounded installer network waits and freshly verified macOS and Windows runtime artifacts. [`v0.3.0-standard`](https://github.com/LeonardSEO/stockfly/releases/tag/v0.3.0-standard) is superseded because blocked native connections could wait indefinitely. See the [v0.3.1 release record](docs/releases/v0.3.1-standard.md).
 
 ## Models and measured results
 
@@ -37,14 +37,14 @@ The corrected native CPU and Apple M4 Metal implementations pass **24/24 fixed m
 
 The package contains a native server, built web/WASM files, Stockfish, licenses and corresponding source archives. A normal local build also includes the selected graph, soma metadata and Bio/Max model catalog; it requires no Node, Python, Rust or training to **run**. Download-first CI bundles omit model artifacts and need a separately published experimental model release before they can play.
 
-Extract `stockfly-macos-arm64.zip` or `stockfly-windows-x64.zip`, enter its `stockfly` folder, and launch `Start StockFly.command` on macOS or `Start StockFly.cmd` on Windows. The launcher prints and opens `http://127.0.0.1:8765`. These local bundles are unsigned. The Windows download-first runtime/browser smoke passed on [the CI artifact from commit d29039f](docs/results/2026-09-19-windows-runtime.md); Windows model inference and macOS notarization remain unverified.
+Extract `stockfly-macos-arm64.zip` or `stockfly-windows-x64.zip`, enter its `stockfly` folder, and launch `Start StockFly.command` on macOS or `Start StockFly.cmd` on Windows. The launcher prints and opens `http://127.0.0.1:8765`. These local bundles are unsigned. The v0.3.1 Windows download-first runtime/browser smoke passed on [workflow 35436917133 from commit a3f6ebd](https://github.com/LeonardSEO/stockfly/actions/runs/35436917133); Windows model inference and macOS notarization remain unverified.
 
 When models are absent, the UI shows an executable download instruction. Run the bundled `Download models.command` / `Download models.cmd`, or use the native CLI:
 
 ```sh
 # macOS; Windows uses .\stockfly-server.exe
 ./stockfly-server fetch-models                 # newest published release, including prereleases
-./stockfly-server fetch-models --tag v0.3.1-standard  # after the patch prerelease is published
+./stockfly-server fetch-models --tag v0.3.1-standard
 ./stockfly-server --open
 ```
 
@@ -71,7 +71,7 @@ For a bundle with locally prepared models, omit `--without-models`. This require
 For development, an authorized published release can populate a fresh clone without training:
 
 ```sh
-node tools/models/fetch-release.mjs --tag v0.3.1-standard  # after publication
+node tools/models/fetch-release.mjs --tag v0.3.1-standard
 # The release uses data/browser-models; keep the tracked legacy public link valid.
 mkdir -p data/checkpoints
 # Prepare the pinned browser opponent, source archive and license files before Vite.
@@ -92,7 +92,7 @@ node tools/models/publish-release.mjs --tag v0.3.1-standard \
   --input dist/releases/BUILD_DIRECTORY/stockfly --out dist/model-release-v0.3.1-standard
 ```
 
-The default is a local dry run. It writes content-addressed assets and `release-manifest.json` with each file's SHA-256, byte size, model kind, graph identity, training preset and attribution. The manifest retains **experimental / causal failed** status and includes measured evidence. It binds the causal, ladder and parity evidence to the catalog, graph, maps and raw-report digests. It refuses uncatalogued checkpoints, mismatched evidence/graph/checkpoint identities, symlinks and output reuse. An explicit `--publish` invokes `gh release create --prerelease`. The reviewed `v0.3.0-standard` inputs are published; all 42 remote assets were checked against their local byte sizes and SHA-256 digests. `v0.3.1-standard` keeps the same model/evidence identities and adds bounded installer network waits. A Windows runtime asset may be attached only after its exact workflow smoke passes.
+The default is a local dry run. It writes content-addressed assets and `release-manifest.json` with each file's SHA-256, byte size, model kind, graph identity, training preset and attribution. The manifest retains **experimental / causal failed** status and includes measured evidence. It binds the causal, ladder and parity evidence to the catalog, graph, maps and raw-report digests. It refuses uncatalogued checkpoints, mismatched evidence/graph/checkpoint identities, symlinks and output reuse. An explicit `--publish` invokes `gh release create --prerelease`. The reviewed `v0.3.1-standard` inputs are published; all 42 remote assets were checked against their local byte sizes and SHA-256 digests. It keeps the v0.3.0 model/evidence identities, adds bounded installer network waits, and includes runtime assets rebuilt from the patch commit. A Windows runtime asset may be attached only after its exact workflow smoke passes.
 
 Focused verification:
 
@@ -127,7 +127,7 @@ Presets target smoke ≤10 minutes, quick ≤30 minutes, standard ≤2 hours and
 - [ ] Browser WebGPU and Windows DX12 numerical parity.
 - [x] Historical experimental releases and Standard candidate sweep publication.
 - [x] Published reviewed `v0.3.0-standard` canonical experimental assets.
-- [ ] Publish `v0.3.1-standard` with bounded installer network waits and freshly verified runtimes.
+- [x] Published `v0.3.1-standard` with bounded installer network waits and freshly verified runtimes.
 - [x] Windows download-first runtime/browser smoke on the identified CI artifact.
 
 ## License
