@@ -4,22 +4,24 @@
 
 StockFly simulates the compiled Janelia MaleCNS v1.0 graph: **165,122 neurons and 25,563,197 edges**. Fixed chess inputs drive sensory populations; fixed neural readouts score legal moves. The browser displays sampled activity from that simulation. It runs locally, using WebGPU where available and CPU/WASM fallback when GPU initialization or inference fails.
 
-**Status, 18 September 2026:** the browser application, two trained Full models, native GPU inference, causal controls, actual match benchmark, and local release automation are implemented. Both models **failed the scientific causal acceptance gate**. All 440 measured games were checkmate losses. This is an experimental runtime, not a validated strong chess engine. The verified assets and macOS arm64 runtime are published in the [v0.1.0 experimental prerelease](https://github.com/LeonardSEO/stockfly/releases/tag/v0.1.0-experimental).
+**Status, 19 September 2026:** the canonical local catalog selects **Bio Full Standard seed 45** and **Max Full Standard seed 43**. Both **FAIL the post-FMA causal acceptance gate**. The selected models lost all **200/200** low-node ladder games by checkmate. Native Apple M4 Metal parity passes the fixed 24-case suite after the arithmetic correction. `v0.3.0-standard` is being prepared as an **experimental, causal-failed prerelease**; publication remains pending. The Windows download-first runtime/browser smoke passed on the identified CI artifact. See the [release preparation record](docs/releases/v0.3.0-standard.md).
 
 ## Models and measured results
 
-| Model | Local artifact | Scientific status |
+| Model | Canonical local artifact | Scientific status |
 |---|---|---|
-| **Bio Full** | Quick preset, 4,934 training trials; learning restricted to the biological mask | Causal gate failed |
-| **Max Full** | Quick preset, 4,934 training trials; all synaptic magnitudes eligible for learning | Causal gate failed |
+| **Bio Full** | Standard, curriculum-order seed 45, 6,898 training trials; biological plasticity mask | Post-FMA causal gate FAIL |
+| **Max Full** | Standard, curriculum-order seed 43, 5,649 training trials; all synaptic magnitudes eligible | Post-FMA causal gate FAIL |
 
-“Full” describes stepping the complete compiled graph. It does not mean the causal gate passed. Topology and signs remain fixed during training; local plasticity changes synaptic magnitudes, without a trainable chess-policy layer after the graph.
+“Full” describes stepping the complete compiled graph. Topology and signs remain fixed during training; local plasticity changes synaptic magnitudes, without a trainable chess-policy layer after the graph. StockFly Lite has been removed from the product; **Stockfish 19 Lite remains the external teacher/opponent**.
 
-The frozen 175-position audit measured teacher top-1 agreement of **24/175 for Bio**, versus 23 reset, 28 shuffled and 25 brain bypass; **18/175 for Max**, versus 23 reset, 22 shuffled and 25 brain bypass. Those controls do not support a causal acceptance claim. Region-ablation and output-permutation controls also run and are recorded. Teacher agreement is not Elo. Max's 10.17% online training agreement (4,934 trials) is also a different metric; its 8.92% untrained stream baseline covered 2,198 trials.
+The two checkpoints were selected from ten Standard candidates by the highest observed online training-stream top-1 agreement: 10.50% for Bio and 9.93% for Max. Selection is order-dependent and is neither held-out accuracy nor evidence of stronger play. The [historical sweep](docs/results/2026-09-19-standard-training-sweep.md) records its original candidate-only state; the canonical selection is recorded here and in the release manifest.
 
-An additional ten-run `standard` candidate sweep completed on 19 September: five deterministic curriculum orderings each for Bio and Max, with two hours of learning per candidate. The best online scores were 10.50% for Bio and 9.93% for Max, but these are order-dependent training-stream measurements. The candidates are published separately and have not replaced the audited quick checkpoints. See the [full sweep table and identities](docs/results/2026-09-19-standard-training-sweep.md).
+The canonical post-FMA CPU audits cover 175 rows at 16 settling steps. Bio intact top-1/top-3 is **22/175 and 51/175**, versus the strongest top-1 control, brain bypass, at **25/175 and 52/175**. Max intact is **23/175 and 43/175**, versus shuffled graph at **26/175 and 50/175**. Their exact paired one-sided p-values are 0.744312 and 0.833847; both fail all three preregistered checks. There are 170 unique FENs and 38 rows overlap the available Standard curriculum. These are teacher-agreement measurements, not certified held-out accuracy or Elo. [Canonical audits and preserved pre-fix evidence](docs/results/2026-09-19-standard-causal-audit.md).
 
-The completed playing-strength ladder used the real quick checkpoints on Apple M4 Metal at **16 settling steps**, with ten paired openings per condition. Each model played 140 intact games across Stockfish 19 Lite budgets of 50, 100, 250, 500, 1,000, 2,000 and 5,000 nodes/move, plus 80 control games at 50 nodes/move. All **440/440** games ended in checkmate losses; none were excluded or timed out. Every 20-game row is 0 wins, 0 draws, 20 losses. There is **no finite point Elo estimate**. Each row's one-sided 95% score upper bound is 0.387, corresponding to a local Elo-difference upper bound of about −80 against that exact opponent condition. This is not a human or absolute rating, and these floor results cannot rank Bio, Max or their controls. See the [full table and limitations](docs/results/2026-09-18-playing-strength.md) and [model/audit identities](docs/results/2026-09-18-model-summary.json).
+The selected Standard checkpoints played Stockfish 19 Lite at **1, 5, 10, 25 and 50 nodes/move**, using persistent Apple M4 Metal inference, **16 settling steps**, and ten color-swapped opening pairs per model/budget. Every row is **0 wins, 0 draws, 20 checkmate losses**; no games were excluded, timed out or capped. There is **no finite point Elo estimate**. Each row has a one-sided 95% score upper bound of 0.387 and a local Elo-difference upper bound of about −80 against that exact opponent condition. Rows cannot be pooled into a stronger interval. The 50-node results match the earlier quick models' observed W/D/L; this does not establish equal strength or improvement. [Full Standard ladder and limitations](docs/results/2026-09-19-standard-playing-strength.md).
+
+The [earlier quick-model 440-game experiment](docs/results/2026-09-18-playing-strength.md) remains historical negative evidence. It does not describe the current Standard catalog.
 
 ## Browser features
 
@@ -29,20 +31,20 @@ The completed playing-strength ladder used the real quick checkpoints on Apple M
 - Interactive 3D soma point cloud with real source annotations, filters, cell inspection and simulator activation. These are measured soma centroids, not full neuron skeletons. The visible geometry contains 140,024 neurons; all 165,122 participate in Full simulation.
 - Sample-specific from/to/promotion readouts, legal move scores, timeline scrubbing, integrity-checked JSON/binary trace export and import, and explicit CPU replay verification. Imported traces do not change the board.
 
-GPU/CPU equivalence is not established for the complete graph. One recorded Bio position selected the same move on both backends but failed activation and policy tolerances (activation difference 2.62; policy difference 2.40e-5). Deterministic CPU replay passed on that position. Synthetic GPU tests and successful fallback do not establish full-graph numerical parity.
+The corrected native CPU and Apple M4 Metal implementations pass **24/24 fixed model/FEN cases** at every step from 1 through 16, with zero measured membrane, activation, population and legal-policy differences. All 408 recorded CPU/GPU state hashes and selected moves match. The initial 16/24 activation failures remain preserved; the fix made fused arithmetic explicit without relaxing tolerances. This is fixed-suite native numerical evidence, not universal FEN coverage, browser WebGPU/Windows DX12 parity or playing strength. [Full parity report](docs/results/2026-09-19-fullgraph-parity.md).
 
 ## Run a locally prepared portable bundle
 
 The package contains a native server, built web/WASM files, Stockfish, licenses and corresponding source archives. A normal local build also includes the selected graph, soma metadata and Bio/Max model catalog; it requires no Node, Python, Rust or training to **run**. Download-first CI bundles omit model artifacts and need a separately published experimental model release before they can play.
 
-Extract `stockfly-macos-arm64.zip` or `stockfly-windows-x64.zip`, enter its `stockfly` folder, and launch `Start StockFly.command` on macOS or `Start StockFly.cmd` on Windows. The launcher prints and opens `http://127.0.0.1:8765`. These local bundles are unsigned; Windows execution and macOS notarization have not been validated here.
+Extract `stockfly-macos-arm64.zip` or `stockfly-windows-x64.zip`, enter its `stockfly` folder, and launch `Start StockFly.command` on macOS or `Start StockFly.cmd` on Windows. The launcher prints and opens `http://127.0.0.1:8765`. These local bundles are unsigned. The Windows download-first runtime/browser smoke passed on [the CI artifact from commit d29039f](docs/results/2026-09-19-windows-runtime.md); Windows model inference and macOS notarization remain unverified.
 
 When models are absent, the UI shows an executable download instruction. Run the bundled `Download models.command` / `Download models.cmd`, or use the native CLI:
 
 ```sh
 # macOS; Windows uses .\stockfly-server.exe
 ./stockfly-server fetch-models                 # newest published release, including prereleases
-./stockfly-server fetch-models --tag v0.1.0-experimental  # pin an existing release
+./stockfly-server fetch-models --tag v0.3.0-standard  # after this prepared release is published
 ./stockfly-server --open
 ```
 
@@ -64,12 +66,12 @@ cargo install wasm-pack --version 0.13.1 --locked
 
 This single command builds WASM, Vite web assets and the native server in isolated staging under `dist/releases/`, materializes approved runtime files, and produces a ZIP with no external symlinks. It verifies the pinned Stockfish browser binaries and corresponding v19.0.0 source archive, reusing local files when available. It does not change the development catalog or generated development WASM. Custom `--out` directories must remain inside this repository's `dist/` directory, where the staged app can resolve the installed workspace dependencies. The GitHub workflow builds CI artifacts only; it neither creates nor uploads GitHub Releases.
 
-For a bundle with locally prepared models, omit `--without-models`. This requires `data/compiled/malecns-v1`, `data/browser`, the selected `data/browser-models/catalog.json`, and the audit/training/ladder artifacts named in `scripts/package-local.py`. The package preserves the catalog's exact checkpoint selection using copy mode. Current Max is the quick run, not the older smoke checkpoint under `data/checkpoints`.
+For a bundle with locally prepared models, omit `--without-models`. This requires `data/compiled/malecns-v1`, `data/browser`, the selected `data/browser-models/catalog.json`, and the audit/training/ladder artifacts named in `scripts/package-local.py`. The package preserves the catalog's exact checkpoint selection using copy mode. The catalog must contain exactly Bio Standard seed 45 and Max Standard seed 43 for this canonical release. Packaging includes the Standard training sweep, post-FMA causal reports, low-node ladder, and baseline/final native parity evidence.
 
 For development, an authorized published release can populate a fresh clone without training:
 
 ```sh
-node tools/models/fetch-release.mjs --tag v0.1.0-experimental
+node tools/models/fetch-release.mjs --tag v0.3.0-standard  # after publication
 # The release uses data/browser-models; keep the tracked legacy public link valid.
 mkdir -p data/checkpoints
 # Prepare the pinned browser opponent, source archive and license files before Vite.
@@ -86,22 +88,22 @@ The installer supplies the graph, browser metadata, maps and content-addressed m
 After building a model-containing package, pass its printed `PORTABLE_ROOT` and an empty output directory:
 
 ```sh
-node tools/models/publish-release.mjs --tag v0.1.0-experimental \
-  --input dist/releases/BUILD_DIRECTORY/stockfly --out dist/model-release-v0.1.0-experimental
+node tools/models/publish-release.mjs --tag v0.3.0-standard \
+  --input dist/releases/BUILD_DIRECTORY/stockfly --out dist/model-release-v0.3.0-standard
 ```
 
-The default is a local dry run. It writes content-addressed assets and `release-manifest.json` with each file's SHA-256, byte size, model kind, graph identity, training preset and attribution. The manifest retains **experimental / causal failed** status and includes measured evidence. It refuses uncatalogued checkpoints, mismatched graph/checkpoint identities, symlinks and output reuse. An explicit `--publish` invokes `gh release create --prerelease`. This was used for `v0.1.0-experimental`; its verified macOS arm64 runtime ZIP was uploaded as an additional release asset. Future publication remains a separate explicit action.
+The default is a local dry run. It writes content-addressed assets and `release-manifest.json` with each file's SHA-256, byte size, model kind, graph identity, training preset and attribution. The manifest retains **experimental / causal failed** status and includes measured evidence. It binds the causal, ladder and parity evidence to the catalog, graph, maps and raw-report digests. It refuses uncatalogued checkpoints, mismatched evidence/graph/checkpoint identities, symlinks and output reuse. An explicit `--publish` invokes `gh release create --prerelease`. The current `v0.3.0-standard` inputs are prepared locally; publication remains a separate explicit action after review and artifact verification. A Windows runtime asset may be attached only after its own workflow smoke passes.
 
 Focused verification:
 
 ```sh
 cargo test -p stockfly-server
-node --test tools/models/test-fetch-release.mjs
+node --test tools/models/test-fetch-release.mjs tools/models/test-publish-release.mjs
 ```
 
 ## Training locally
 
-Training is optional. Bio restricts plasticity to its biological mask; Max permits every magnitude to learn. Both preserve graph topology and signs. The quick preset uses 12 settling steps during training; the canonical deployed/ladder calibration uses 16. That difference is recorded rather than presented as interchangeable evidence.
+Training is optional. Bio restricts plasticity to its biological mask; Max permits every magnitude to learn. Both preserve graph topology and signs. The selected Standard checkpoints use 16 settling steps during training and canonical inference/audit/ladder measurements. Historical quick checkpoints used 12 training steps; those results remain separate.
 
 ```sh
 cargo run --release -p stockfly-train -- train \
@@ -115,15 +117,17 @@ Presets target smoke ≤10 minutes, quick ≤30 minutes, standard ≤2 hours and
 
 - [x] Official MaleCNS graph compilation, geometry and exact neuron ordering.
 - [x] CPU reference plus persistent native/browser GPU execution and CPU fallback.
-- [x] Fixed sensory/output maps and Bio/Max local plasticity; two trained quick checkpoints.
+- [x] Fixed sensory/output maps and Bio/Max local plasticity; selected Bio/Max Standard checkpoints.
 - [x] Human and Stockfish exhibition chess UI, model selector and game-over dialog.
 - [x] Real 3D soma activity, annotations, decision readouts and recorded trace replay.
-- [x] Frozen causal controls and actual 440-game playing-strength experiment, with negative evidence retained.
+- [x] Canonical post-FMA causal controls and the 200-game Standard low-node ladder, with failed gates and losses retained.
 - [x] Experimental manifest installer/publisher and local portable macOS/Windows packaging automation.
 - [ ] Successful Full causal acceptance and demonstrated playing-strength improvement.
-- [ ] Broad full-graph CPU/GPU numerical parity.
-- [x] Experimental GitHub publication, including model/runtime assets and the standard candidate sweep.
-- [ ] Windows runtime/browser validation.
+- [x] Full-graph native Apple M4 Metal parity on the fixed 24-case suite.
+- [ ] Browser WebGPU and Windows DX12 numerical parity.
+- [x] Historical experimental releases and Standard candidate sweep publication.
+- [ ] Publish reviewed `v0.3.0-standard` canonical experimental assets.
+- [x] Windows download-first runtime/browser smoke on the identified CI artifact.
 
 ## License
 

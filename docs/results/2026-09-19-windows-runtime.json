@@ -1,0 +1,147 @@
+{
+  "formatVersion": 1,
+  "smoke": "stockfly-portable-runtime",
+  "startedAt": "2026-09-19T09:31:07.911Z",
+  "platform": "win32",
+  "architecture": "x64",
+  "source": {
+    "gitCommit": "d29039f37a24076acbf2d79776349059a2d5deba",
+    "githubRunId": "35434707879",
+    "githubRunAttempt": "1"
+  },
+  "pass": true,
+  "archive": {
+    "name": "stockfly-windows-x64.zip",
+    "sha256": "e90cbadc6f6f3eb8a5a7ebf761544dd6b9bde167a174cd9689922c774baf967a"
+  },
+  "server": {
+    "executable": "stockfly-server.exe",
+    "sha256": "863332ac6daea2a5b59461ae367fde7edfa7e70027ef8c61d49ec31b0a1a99e0",
+    "bind": "127.0.0.1:52848"
+  },
+  "routes": [
+    {
+      "route": "/",
+      "status": 200,
+      "headers": {
+        "content-type": "text/html; charset=utf-8",
+        "cache-control": "no-cache",
+        "cross-origin-opener-policy": "same-origin",
+        "cross-origin-embedder-policy": "require-corp"
+      },
+      "bytes": 471
+    },
+    {
+      "route": "/favicon.svg",
+      "status": 200,
+      "headers": {
+        "content-type": "image/svg+xml",
+        "cache-control": "no-cache",
+        "cross-origin-opener-policy": "same-origin",
+        "cross-origin-embedder-policy": "require-corp"
+      },
+      "bytes": 225
+    },
+    {
+      "route": "/health",
+      "status": 200,
+      "headers": {
+        "content-type": "application/json",
+        "cross-origin-opener-policy": "same-origin",
+        "cross-origin-embedder-policy": "require-corp"
+      },
+      "bytes": 15
+    },
+    {
+      "route": "/models",
+      "status": 200,
+      "headers": {
+        "content-type": "application/json",
+        "cross-origin-opener-policy": "same-origin",
+        "cross-origin-embedder-policy": "require-corp"
+      },
+      "bytes": 2
+    },
+    {
+      "route": "/vendor/models/catalog.json",
+      "status": 404,
+      "headers": {
+        "content-type": "text/plain; charset=UTF-8",
+        "cross-origin-opener-policy": "same-origin",
+        "cross-origin-embedder-policy": "require-corp"
+      },
+      "bytes": 9
+    }
+  ],
+  "noModelState": {
+    "localModels": [],
+    "catalogInstalled": false
+  },
+  "browser": {
+    "executable": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+    "product": "Chrome/152.0.7977.83",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/152.0.0.0 Safari/537.36",
+    "headless": true,
+    "title": "StockFly",
+    "noModelBadge": "Unavailable",
+    "instruction": "Model could not be loaded. Download pretrained model: open a terminal in the StockFly folder and run ./stockfly-server fetch-models (Windows: .\\stockfly-server.exe fetch-models), then Retry loading. No training is required. A published experimental model release must exist.",
+    "instructionVisible": true,
+    "windowsCommandVisible": true,
+    "noTrainingVisible": true,
+    "pageErrors": [],
+    "consoleErrors": [],
+    "browserLogErrors": [],
+    "expectedNoModelLogs": [
+      {
+        "source": "network",
+        "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "url": "http://127.0.0.1:52848/vendor/graph/manifest.json"
+      },
+      {
+        "source": "network",
+        "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "url": "http://127.0.0.1:52848/vendor/graph/neurons.bin"
+      },
+      {
+        "source": "network",
+        "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "url": "http://127.0.0.1:52848/vendor/graph/geometry_lod0.bin"
+      },
+      {
+        "source": "network",
+        "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "url": "http://127.0.0.1:52848/vendor/brain/metadata.json"
+      },
+      {
+        "source": "network",
+        "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "url": "http://127.0.0.1:52848/vendor/models/catalog.json"
+      }
+    ],
+    "expectedNoModelHttpErrors": [
+      {
+        "url": "http://127.0.0.1:52848/vendor/graph/manifest.json",
+        "status": 404
+      },
+      {
+        "url": "http://127.0.0.1:52848/vendor/graph/neurons.bin",
+        "status": 404
+      },
+      {
+        "url": "http://127.0.0.1:52848/vendor/graph/geometry_lod0.bin",
+        "status": 404
+      },
+      {
+        "url": "http://127.0.0.1:52848/vendor/brain/metadata.json",
+        "status": 404
+      },
+      {
+        "url": "http://127.0.0.1:52848/vendor/models/catalog.json",
+        "status": 404
+      }
+    ],
+    "failedRequests": [],
+    "unexpectedHttpErrors": []
+  },
+  "completedAt": "2026-09-19T09:31:13.585Z"
+}

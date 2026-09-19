@@ -7,6 +7,7 @@ import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
 import { validateReleaseManifest } from './validate-release-manifest.mjs';
+import { collectReleaseEvidence } from './release-evidence.mjs';
 const { values } = parseArgs({ options: { tag: { type: 'string' }, input: { type: 'string' }, out: { type: 'string' }, publish: { type: 'boolean', default: false } } });
 if (!values.tag || !/^[A-Za-z0-9._-]+$/.test(values.tag) || !values.input || !values.out) throw Error('Usage: publish-release.mjs --tag TAG --input PORTABLE_ROOT --out EMPTY_OUTPUT [--publish]');
 const input = await realpath(values.input);
@@ -17,7 +18,7 @@ if ((await readdir(out)).length) throw Error('Output must be empty; never overwr
 const hash = async file => { const digest = createHash('sha256'); for await (const chunk of createReadStream(file)) digest.update(chunk); return digest.digest('hex'); };
 const catalog = JSON.parse(await readFile(path.join(input, 'data/browser-models/catalog.json'), 'utf8'));
 const models = catalog.models.filter(model => model.availability === 'available');
-if (models.length !== 2 || !['bio-full', 'max-full'].every(kind => models.some(model => model.id === kind))) throw Error('Expected Bio and Max Full experimental checkpoints');
+if (catalog.models.length !== 2 || models.length !== 2 || !['bio-full', 'max-full'].every(kind => models.some(model => model.id === kind && model.expectedKind === kind))) throw Error('Expected exactly Bio and Max Full experimental checkpoints');
 const graphHash = models[0].graphNeuronsSha256;
 if (models.some(model => model.graphNeuronsSha256 !== graphHash)) throw Error('Models use different graphs');
 const files = [];
@@ -31,7 +32,7 @@ async function walk(relative) {
     if (!entry.isFile()) throw Error(`Not a regular file: ${item}`);
     const source = path.join(input, item);
     const identity = await hash(source);
-    const model = models.find(model => item.endsWith(`/${path.basename(model.checkpointUrl)}`));
+    const model = models.find(model => item === `data/browser-models/checkpoints/${path.basename(model.checkpointUrl)}`);
     if (item.endsWith('.sfckpt') && !model) throw Error(`Uncatalogued checkpoint: ${item}`);
     if (model && identity !== model.checkpointSha256) throw Error(`Checkpoint hash mismatch: ${item}`);
     const asset = `${identity}-${entry.name}`;
@@ -43,12 +44,17 @@ async function walk(relative) {
 // Explicit allowlist: raw data and unrelated local files cannot enter the release.
 for (const directory of ['data/compiled/malecns-v1', 'data/browser', 'data/chess-maps', 'data/browser-models', 'data/release-evidence']) await walk(directory);
 if (files.find(file => file.path === 'data/compiled/malecns-v1/neurons.bin')?.sha256 !== graphHash) throw Error('Graph does not match the model catalog');
+for (const model of models) {
+  if (!files.some(file => file.modelKind === model.id && file.sha256 === model.checkpointSha256)) throw Error(`Missing catalogued checkpoint: ${model.id}`);
+}
+const { selections, evidence } = await collectReleaseEvidence(input, models, files);
 const manifest = {
   formatVersion: 1, tag: values.tag, releaseStatus: 'experimental', causalAuditStatus: 'failed',
   integrityNotice: 'SHA-256 verifies content integrity, not publisher identity or a cryptographic signature.',
   attribution: { maleCns: 'Janelia Research Campus / FlyEM MaleCNS v1.0, CC-BY. See THIRD_PARTY_NOTICES.md and https://www.janelia.org/project-team/flyem',
     stockfish: 'Stockfish.js v19.0.0 Lite single-thread, GPLv3. Portable bundle preserves Copying.txt, AUTHORS, NOTICE.txt, sources.json and corresponding upstream source archive.' },
-  models: models.map(model => ({ kind: model.expectedKind, trainingPreset: model.trainingPreset, trialsRun: model.trialsRun, checkpointSha256: model.checkpointSha256, graphNeuronsSha256: graphHash, causalAuditStatus: 'failed' })),
+  models: models.map(model => ({ ...selections.find(selection => selection.kind === model.id), trainingPreset: model.trainingPreset, trialsRun: model.trialsRun, checkpointSha256: model.checkpointSha256, graphNeuronsSha256: graphHash })),
+  evidence,
   files: files.sort((a, b) => a.path.localeCompare(b.path)),
 };
 const schema = JSON.parse(await readFile(new URL('./release-manifest.schema.json', import.meta.url), 'utf8'));
@@ -58,7 +64,7 @@ console.log(`Prepared ${files.length} files, ${files.reduce((sum, file) => sum +
 console.log('EXPERIMENTAL: Bio and Max failed their causal gates. Nothing uploaded unless --publish was explicitly supplied.');
 if (values.publish) {
   const assets = (await readdir(out)).map(name => path.join(out, name));
-  const result = spawnSync('gh', ['release', 'create', values.tag, '--repo', 'LeonardSEO/stockfly', '--prerelease', '--title', `StockFly ${values.tag} — experimental`, '--notes', 'Experimental runtime and pretrained artifacts. Both Full causal audits failed. Full denotes graph coverage, not validated playing strength. See packaged source, licenses and release evidence.', ...assets], { stdio: 'inherit' });
+  const result = spawnSync('gh', ['release', 'create', values.tag, '--repo', 'LeonardSEO/stockfly', '--prerelease', '--title', `StockFly ${values.tag} — experimental`, '--notes', `Experimental Standard pretrained artifacts. Both post-FMA Full causal audits failed. Measured ladder: ${evidence.playingStrength.totals.wins} wins, ${evidence.playingStrength.totals.draws} draws, ${evidence.playingStrength.totals.losses} losses; see per-budget score and local Elo bounds. Native parity ${evidence.nativeParity.status} on ${evidence.nativeParity.cases} fixed Apple M4 Metal cases only. Full denotes graph coverage, not validated playing strength. Windows runtime/browser smoke passed for the identified download-first no-model archive; Windows model inference and browser parity remain unverified. See packaged source, licenses and release evidence.`, ...assets], { stdio: 'inherit' });
   if (result.error) throw result.error;
   if (result.status !== 0) process.exit(result.status ?? 1);
 }

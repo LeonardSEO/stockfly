@@ -1,7 +1,7 @@
 // The JSON Schema subset used by release-manifest.schema.json. Unsupported
 // keywords fail closed so a future schema change cannot silently skip validation.
 import { isDeepStrictEqual } from 'node:util';
-const keywords = new Set(['$schema', 'title', 'type', 'required', 'properties', 'items', 'minItems', 'minLength', 'pattern', 'minimum', 'const', 'enum']);
+const keywords = new Set(['$schema', 'title', 'type', 'required', 'properties', 'items', 'minItems', 'maxItems', 'minLength', 'pattern', 'minimum', 'const', 'enum']);
 const types = {
   object: value => value !== null && typeof value === 'object' && !Array.isArray(value),
   array: Array.isArray,
@@ -28,6 +28,7 @@ function checkValue(value, schema, location) {
   if (typeof value === 'number' && schema.minimum !== undefined && value < schema.minimum) fail('minimum');
   if (Array.isArray(value)) {
     if (schema.minItems !== undefined && value.length < schema.minItems) fail('minItems');
+    if (schema.maxItems !== undefined && value.length > schema.maxItems) fail('maxItems');
     if (schema.items) value.forEach((item, i) => checkValue(item, schema.items, `${location}[${i}]`));
   }
   if (types.object(value)) {

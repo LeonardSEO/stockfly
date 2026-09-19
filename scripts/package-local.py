@@ -36,9 +36,9 @@ def main():
     args = parser.parse_args()
     system, machine = platform.system(), platform.machine().lower()
     if system == 'Darwin' and machine in ('arm64', 'aarch64'):
-        name, exe = 'stockfly-macos-arm64', 'stockfly-server'
+        bundle_name, exe = 'stockfly-macos-arm64', 'stockfly-server'
     elif system == 'Windows' and machine in ('amd64', 'x86_64'):
-        name, exe = 'stockfly-windows-x64', 'stockfly-server.exe'
+        bundle_name, exe = 'stockfly-windows-x64', 'stockfly-server.exe'
     else:
         raise SystemExit('Supported local packaging hosts: macOS arm64 or Windows x64')
     out = args.out.resolve()
@@ -46,7 +46,7 @@ def main():
         raise SystemExit('--out must be inside this repository\'s dist/ directory so the staged app can resolve workspace node_modules')
     out.mkdir(parents=True, exist_ok=True)
     # Each run owns a new directory, preserving previous builds and active Vite files.
-    stage = Path(tempfile.mkdtemp(prefix=f'{name}-', dir=out))
+    stage = Path(tempfile.mkdtemp(prefix=f'{bundle_name}-', dir=out))
     bundle = stage / 'stockfly'
     app = stage / 'build-app'
     bundle.mkdir()
@@ -64,6 +64,10 @@ def main():
     copy_tree(ROOT / 'crates/stockfly-chess/resources', bundle / 'data/chess-maps')
     if not args.without_models:
         catalog = json.loads((ROOT / 'data/browser-models/catalog.json').read_text())
+        if (len(catalog['models']) != 2 or
+                {m['id'] for m in catalog['models']} != {'bio-full', 'max-full'} or
+                any(m['availability'] != 'available' for m in catalog['models'])):
+            raise ValueError('Portable models require exactly the available Bio Full and Max Full catalog')
         selected = {m['id']: ROOT / 'data/browser-models/checkpoints' / Path(m['checkpointUrl']).name
                     for m in catalog['models'] if m['availability'] == 'available'}
         run('python' if system == 'Windows' else 'python3', 'tools/browser/prepare_models.py',
@@ -73,19 +77,33 @@ def main():
         copy_tree(ROOT / 'data/browser', bundle / 'data/browser')
         evidence = bundle / 'data/release-evidence'
         evidence.mkdir()
-        for source in ['data/reports/bio-causal-controls-2026-09-18-final.json',
-                       'data/reports/max-quick-causal-controls-2026-09-18.json',
-                       'data/training-runs/max-quick-2026-09-18/training-summary.json',
-                       'data/reports/ladder-16step-2026-09-18/summary.json',
-                       'data/reports/ladder-16step-2026-09-18/RESULTS.md']:
-            shutil.copyfile(ROOT / source, evidence / Path(source).name)
+        for result in ['standard-training-sweep', 'standard-causal-audit',
+                       'standard-playing-strength', 'fullgraph-parity', 'windows-runtime']:
+            for extension in ['json', 'md']:
+                name = f'2026-09-19-{result}.{extension}'
+                shutil.copyfile(ROOT / 'docs/results' / name, evidence / name)
+        # Keep raw negative/baseline evidence alongside the canonical summaries.
+        for directory, source_dir, names in [
+            ('causal', 'standard-validation-2026-09-19/causal-audit-fma',
+             ['bio-standard-seed45.json', 'max-standard-seed43.json', 'superseded-summary.json']),
+            ('causal-superseded', 'standard-validation-2026-09-19/causal-audit-frozen',
+             ['bio-standard-seed45.json', 'max-standard-seed43.json']),
+            ('ladder', 'standard-low-ladder-2026-09-19',
+             ['bio-standard-seed45.json', 'max-standard-seed43.json']),
+            ('parity', 'standard-validation-2026-09-19/fullgraph-parity',
+             ['baseline.json', 'diagnostic.json', 'final.json']),
+        ]:
+            (evidence / directory).mkdir()
+            for name in names:
+                shutil.copyfile(ROOT / 'data/reports' / source_dir / name, evidence / directory / name)
     run('wasm-pack', 'build', 'crates/stockfly-wasm', '--target', 'web', '--release', '--out-dir', app / 'src/wasm-gen')
     run('npx.cmd' if system == 'Windows' else 'npx', '--no-install', 'vite', 'build', app, '--outDir', bundle / 'apps/web/dist')
     run('cargo', 'build', '--locked', '--release', '-p', 'stockfly-server')
     shutil.copy2(ROOT / 'target/release' / exe, bundle / exe)
     for source in ['LICENSE', 'THIRD_PARTY_NOTICES.md', 'README.md']:
         shutil.copy2(ROOT / source, bundle / source)
-    (bundle / 'EXPERIMENTAL.txt').write_text('Bio Full and Max Full failed causal acceptance. Full describes complete graph coverage, not validated strength. SHA-256 integrity is not a publisher signature. See README and data/release-evidence.\n')
+    copy_tree(ROOT / 'docs/releases', bundle / 'docs/releases')
+    (bundle / 'EXPERIMENTAL.txt').write_text('v0.3.0-standard preparation: Bio Standard seed 45 and Max Standard seed 43 both FAIL the post-FMA causal gate. The low-node ladder records 200/200 checkmate losses, with no finite point Elo. Native Apple M4 Metal parity passes the fixed 24-case suite only; browser WebGPU and Windows DX12 parity are unverified. Full describes complete graph coverage, not validated strength. Stockfish 19 Lite remains the external teacher/opponent. SHA-256 integrity is not a publisher signature. See README, docs/releases and data/release-evidence.\n')
     if system == 'Windows':
         (bundle / 'Start StockFly.cmd').write_text('@echo off\r\ncd /d "%~dp0"\r\nstockfly-server.exe --open\r\npause\r\n')
         (bundle / 'Download models.cmd').write_text('@echo off\r\ncd /d "%~dp0"\r\nstockfly-server.exe fetch-models %*\r\npause\r\n')
@@ -105,7 +123,7 @@ def main():
     links = [path for path in bundle.rglob('*') if path.is_symlink()]
     if links:
         raise ValueError(f'Portable bundle contains symlinks: {links}')
-    archive_path = shutil.make_archive(str(stage / name), 'zip', stage, 'stockfly')
+    archive_path = shutil.make_archive(str(stage / bundle_name), 'zip', stage, 'stockfly')
     print(f'PORTABLE_ROOT={bundle}\nARCHIVE={archive_path}', flush=True)
 
 

@@ -2,21 +2,49 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "StockFly experimental release manifest",
   "type": "object",
-  "required": ["formatVersion", "tag", "releaseStatus", "causalAuditStatus", "attribution", "files"],
+  "required": ["formatVersion", "tag", "releaseStatus", "causalAuditStatus", "attribution", "files", "models", "evidence"],
   "properties": {
     "formatVersion": {"const": 1},
     "tag": {"type": "string", "pattern": "^[A-Za-z0-9._-]+$"},
     "releaseStatus": {"const": "experimental"},
     "causalAuditStatus": {"const": "failed"},
-    "attribution": {"type": "object", "required": ["maleCns", "stockfish"], "properties": {"maleCns": {"type": "string", "minLength": 1}, "stockfish": {"type": "string", "minLength": 1}}},
-    "files": {"type": "array", "minItems": 1, "items": {"type": "object", "required": ["path", "asset", "size", "sha256", "modelKind", "graphNeuronsSha256", "trainingPreset"], "properties": {
-      "path": {"type": "string", "pattern": "^data/(compiled/malecns-v1|checkpoints|browser-models|browser|chess-maps|release-evidence)/"},
-      "asset": {"type": "string", "pattern": "^[A-Za-z0-9_-][A-Za-z0-9._-]*$"},
-      "size": {"type": "integer", "minimum": 0},
-      "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
-      "graphNeuronsSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
-      "modelKind": {"enum": ["shared", "bio-full", "max-full"]},
-      "trainingPreset": {"type": "string", "minLength": 1}
-    }}}
+    "attribution": {
+      "type": "object",
+      "required": ["maleCns", "stockfish"],
+      "properties": {
+        "maleCns": {"type": "string", "minLength": 1},
+        "stockfish": {"type": "string", "minLength": 1}
+      }
+    },
+    "files": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["path", "asset", "size", "sha256", "modelKind", "graphNeuronsSha256", "trainingPreset"],
+        "properties": {"path": {"type": "string", "pattern": "^data/(compiled/malecns-v1|checkpoints|browser-models|browser|chess-maps|release-evidence)/"}, "asset": {"type": "string", "pattern": "^[A-Za-z0-9_-][A-Za-z0-9._-]*$"}, "size": {"type": "integer", "minimum": 0}, "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}, "graphNeuronsSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}, "modelKind": {"enum": ["shared", "bio-full", "max-full"]}, "trainingPreset": {"type": "string", "minLength": 1}}
+      }
+    },
+    "models": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "type": "object",
+        "required": ["kind", "selectionSeed", "trainingPreset", "trialsRun", "checkpointSha256", "graphNeuronsSha256", "causalAuditStatus"],
+        "properties": {"kind": {"enum": ["bio-full", "max-full"]}, "selectionSeed": {"type": "integer", "minimum": 0}, "trainingPreset": {"const": "standard"}, "trialsRun": {"type": "integer", "minimum": 1}, "checkpointSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}, "graphNeuronsSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}, "causalAuditStatus": {"const": "failed"}}
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "required": ["training", "causalAudit", "playingStrength", "nativeParity", "windowsRuntime"],
+      "properties": {
+        "training": {"type": "object", "required": ["summary", "selection"], "properties": {"summary": {"type": "object", "required": ["path", "sha256"], "properties": {"path": {"type": "string", "pattern": "^data/release-evidence/"}, "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}}}, "selection": {"type": "string", "minLength": 1}}},
+        "causalAudit": {"type": "object", "required": ["status", "summary", "settleSteps", "evaluatorSha256", "scope"], "properties": {"status": {"const": "failed"}, "summary": {"type": "object", "required": ["path", "sha256"], "properties": {"path": {"type": "string", "pattern": "^data/release-evidence/"}, "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}}}, "settleSteps": {"const": 16}, "evaluatorSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}, "scope": {"type": "string", "minLength": 1}}},
+        "playingStrength": {"type": "object", "required": ["summary", "budgets", "totals", "finitePointElo", "scope"], "properties": {"summary": {"type": "object", "required": ["path", "sha256"], "properties": {"path": {"type": "string", "pattern": "^data/release-evidence/"}, "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}}}, "budgets": {"type": "array", "minItems": 1, "items": {"type": "integer", "minimum": 1}}, "totals": {"type": "object", "required": ["wins", "draws", "losses"], "properties": {"wins": {"type": "integer", "minimum": 0}, "draws": {"type": "integer", "minimum": 0}, "losses": {"type": "integer", "minimum": 0}}}, "finitePointElo": {"const": false}, "scope": {"type": "string", "minLength": 1}}},
+        "nativeParity": {"type": "object", "required": ["status", "summary", "cases", "scope"], "properties": {"status": {"enum": ["passed", "failed"]}, "summary": {"type": "object", "required": ["path", "sha256"], "properties": {"path": {"type": "string", "pattern": "^data/release-evidence/"}, "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}}}, "cases": {"type": "integer", "minimum": 1}, "scope": {"type": "string", "minLength": 1}}},
+        "windowsRuntime": {"type": "object", "required": ["status", "summary", "sourceCommit", "archiveSha256", "scope"], "properties": {"status": {"const": "passed"}, "summary": {"type": "object", "required": ["path", "sha256"], "properties": {"path": {"type": "string", "pattern": "^data/release-evidence/"}, "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}}}, "sourceCommit": {"type": "string", "pattern": "^[a-f0-9]{40}$"}, "archiveSha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}, "scope": {"type": "string", "minLength": 1}}}
+      }
+    }
   }
 }
