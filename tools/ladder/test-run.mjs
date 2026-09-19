@@ -1,8 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Chess } from 'chess.js';
-import { LineProcess, opening, terminal, playGame, sameIdentity } from './run.mjs';
+import { LineProcess, opening, terminal, playGame, sameIdentity, parseBudgets } from './run.mjs';
 const config = { opening_seed: 20260918, opening_plies: 8, max_plies: 0 };
+test('explicit low-node budgets preserve defaults and reject invalid conditions', () => {
+  assert.deepEqual(parseBudgets('1,5,10,25,50', [50, 100]), [1, 5, 10, 25, 50]);
+  assert.deepEqual(parseBudgets(undefined, [50, 100]), [50, 100]);
+  for (const value of ['', '0', '-1', '1.5', '1,1', '1,', 'NaN', 'Infinity', '9007199254740992']) {
+    assert.throws(() => parseBudgets(value, [50]), /invalid budgets/);
+  }
+});
 test('distinct reproducible paired openings', () => {
   const positions = Array.from({length:10},(_,p)=>opening(config,p));
   assert.equal(new Set(positions.map(p=>p.fen)).size,10);

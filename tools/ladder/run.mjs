@@ -160,6 +160,11 @@ function save(file, report) {
 export function sameIdentity(actual, expected) {
   if (JSON.stringify(actual) !== JSON.stringify(expected)) throw new Error('resume identity/config mismatch; use a fresh output path');
 }
+export function parseBudgets(value, defaults) {
+  const budgets = value === undefined ? defaults : value.split(',').map(Number);
+  if (!budgets.length || new Set(budgets).size !== budgets.length || budgets.some(n => !Number.isSafeInteger(n) || n < 1)) throw new Error('invalid budgets');
+  return budgets;
+}
 function summarize(binary, games, config) {
   const result = spawnSync(binary, ['elo-summary'], { input: JSON.stringify({ games, replicates: config.bootstrap_replicates, seed: config.bootstrap_seed }), encoding: 'utf8' });
   if (result.status !== 0) throw new Error(result.stderr || 'statistics process failed');
@@ -176,9 +181,9 @@ export async function main(argv) {
   const config = JSON.parse(fs.readFileSync('crates/stockfly-train/resources/ladder.json'));
   const control = args['--control'] || 'intact';
   if (control !== 'intact' && !config.controls.includes(control)) throw new Error('invalid control');
-  const budgets = args['--budgets'] ? args['--budgets'].split(',').map(Number) : control === 'intact' ? config.budgets : [config.control_budget];
+  const budgets = parseBudgets(args['--budgets'], control === 'intact' ? config.budgets : [config.control_budget]);
   const pairs = args['--pairs'] ? Number(args['--pairs']) : config.opening_pairs;
-  if (!Number.isInteger(pairs) || pairs < 1 || !budgets.length || new Set(budgets).size !== budgets.length || budgets.some(n => !config.budgets.includes(n))) throw new Error('invalid pairs/budgets');
+  if (!Number.isInteger(pairs) || pairs < 1) throw new Error('invalid pairs');
   const binary = path.resolve(args['--binary'] || 'target/release/stockfly-train');
   const vendor = 'data/vendor/stockfish-19-lite';
   const sources = JSON.parse(fs.readFileSync(`${vendor}/sources.json`));
