@@ -29,11 +29,21 @@ jobs:
       - run: npm ci
       - name: Package download-first runtime (no training or model claim)
         run: python scripts/package-local.py --without-models
+      - name: Smoke Windows portable runtime and browser path
+        if: runner.os == 'Windows'
+        run: >-
+          node scripts/smoke-portable.mjs
+          --archive dist/releases
+          --evidence dist/releases/${{ matrix.name }}-smoke.json
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: ${{ matrix.name }}
-          path: dist/releases/**/${{ matrix.name }}.zip
+          path: |
+            dist/releases/**/${{ matrix.name }}.zip
+            dist/releases/${{ matrix.name }}-smoke.json
           if-no-files-found: error
 # This workflow creates CI artifacts only. It never creates a GitHub Release or
 # uploads release assets. Missing-model download requires a separately approved,
-# published experimental manifest. Windows execution is not locally validated.
+# published experimental manifest. The Windows artifact includes runtime/browser
+# smoke evidence; the macOS artifact remains packaging-only in this workflow.
