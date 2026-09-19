@@ -1,10 +1,9 @@
-export const MODEL_IDS = ['bio-full', 'max-full', 'lite'] as const;
+export const MODEL_IDS = ['bio-full', 'max-full'] as const;
 export type ModelId = typeof MODEL_IDS[number];
 
 const EXPECTED_KINDS: Record<ModelId, ModelId> = {
   'bio-full': 'bio-full',
   'max-full': 'max-full',
-  lite: 'lite',
 };
 
 interface ModelCatalogBase {
@@ -24,12 +23,7 @@ export interface AvailableModelCatalogEntry extends ModelCatalogBase {
   outputMapSha256: string;
 }
 
-export interface UnavailableModelCatalogEntry extends ModelCatalogBase {
-  availability: 'unavailable';
-  reason: string;
-}
-
-export type ModelCatalogEntry = AvailableModelCatalogEntry | UnavailableModelCatalogEntry;
+export type ModelCatalogEntry = AvailableModelCatalogEntry;
 
 export interface ModelCatalog {
   formatVersion: 1;
@@ -97,9 +91,6 @@ export function parseModelCatalog(value: unknown): ModelCatalog {
     const expectedKind = modelId(item.expectedKind);
     if (expectedKind !== EXPECTED_KINDS[id]) throw new Error(`${id} catalog entry has incompatible expected kind ${expectedKind}`);
     const base = { id, label: text(item.label, `${id}.label`), expectedKind };
-    if (item.availability === 'unavailable') {
-      return { ...base, availability: 'unavailable', reason: text(item.reason, `${id}.reason`) };
-    }
     if (item.availability !== 'available') throw new Error(`${id}.availability is invalid`);
     const checkpointUrl = text(item.checkpointUrl, `${id}.checkpointUrl`);
     if (!/^\/vendor\/models\/checkpoints\/[a-z0-9.-]+\.sfckpt$/.test(checkpointUrl)) {
@@ -126,16 +117,12 @@ export function parseModelCatalog(value: unknown): ModelCatalog {
       || models.find(model => model.id === 'max-full')?.availability !== 'available') {
     throw new Error('Bio Full and Max Full must have prepared checkpoints');
   }
-  if (models.find(model => model.id === 'lite')?.availability !== 'unavailable') {
-    throw new Error('Lite must remain unavailable until its prerequisite passes');
-  }
   return { formatVersion: 1, models };
 }
 
 export function availableModel(catalog: ModelCatalog, id: ModelId): AvailableModelCatalogEntry {
   const entry = catalog.models.find(model => model.id === id);
   if (!entry) throw new Error(`Model ${id} is not in the catalog`);
-  if (entry.availability !== 'available') throw new Error(`${entry.label} is unavailable: ${entry.reason}`);
   return entry;
 }
 

@@ -44,7 +44,7 @@ async function walk(relative) {
 for (const directory of ['data/compiled/malecns-v1', 'data/browser', 'data/chess-maps', 'data/browser-models', 'data/release-evidence']) await walk(directory);
 if (files.find(file => file.path === 'data/compiled/malecns-v1/neurons.bin')?.sha256 !== graphHash) throw Error('Graph does not match the model catalog');
 const manifest = {
-  formatVersion: 1, tag: values.tag, releaseStatus: 'experimental', causalAuditStatus: 'failed', liteStatus: 'blocked',
+  formatVersion: 1, tag: values.tag, releaseStatus: 'experimental', causalAuditStatus: 'failed',
   integrityNotice: 'SHA-256 verifies content integrity, not publisher identity or a cryptographic signature.',
   attribution: { maleCns: 'Janelia Research Campus / FlyEM MaleCNS v1.0, CC-BY. See THIRD_PARTY_NOTICES.md and https://www.janelia.org/project-team/flyem',
     stockfish: 'Stockfish.js v19.0.0 Lite single-thread, GPLv3. Portable bundle preserves Copying.txt, AUTHORS, NOTICE.txt, sources.json and corresponding upstream source archive.' },
@@ -55,10 +55,10 @@ const schema = JSON.parse(await readFile(new URL('./release-manifest.schema.json
 validateReleaseManifest(manifest, schema);
 await writeFile(path.join(out, 'release-manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
 console.log(`Prepared ${files.length} files, ${files.reduce((sum, file) => sum + file.size, 0)} bytes. ${path.join(out, 'release-manifest.json')}`);
-console.log('EXPERIMENTAL: Bio and Max failed their causal gates; Lite blocked. Nothing uploaded unless --publish was explicitly supplied.');
+console.log('EXPERIMENTAL: Bio and Max failed their causal gates. Nothing uploaded unless --publish was explicitly supplied.');
 if (values.publish) {
   const assets = (await readdir(out)).map(name => path.join(out, name));
-  const result = spawnSync('gh', ['release', 'create', values.tag, '--repo', 'LeonardSEO/stockfly', '--prerelease', '--title', `StockFly ${values.tag} — experimental`, '--notes', 'Experimental runtime and pretrained artifacts. Both Full causal audits failed; Lite is blocked. Full denotes graph coverage, not validated playing strength. See packaged source, licenses and release evidence.', ...assets], { stdio: 'inherit' });
+  const result = spawnSync('gh', ['release', 'create', values.tag, '--repo', 'LeonardSEO/stockfly', '--prerelease', '--title', `StockFly ${values.tag} — experimental`, '--notes', 'Experimental runtime and pretrained artifacts. Both Full causal audits failed. Full denotes graph coverage, not validated playing strength. See packaged source, licenses and release evidence.', ...assets], { stdio: 'inherit' });
   if (result.error) throw result.error;
   if (result.status !== 0) process.exit(result.status ?? 1);
 }

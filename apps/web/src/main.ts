@@ -47,7 +47,7 @@ const app = document.getElementById('app')!;
 app.innerHTML = `<nav class="sidebar" aria-label="Main navigation"><a class="brand" href="#play"><span class="brand-symbol" aria-hidden="true">♞</span>Stock<span>Fly</span></a><a class="nav-link current" href="#play"><span aria-hidden="true">▦</span> Play</a><a class="nav-link" href="#brain"><span aria-hidden="true">◉</span> Brain</a><p class="sidebar-caption">Chess, through<br>a fly’s connectome.</p><a class="asset-credit" href="/pieces/README.txt">Piece credits</a></nav>
   <main id="play"><header class="page-heading"><div><p class="eyebrow">THE CONNECTOME AT PLAY</p><h1>Play StockFly</h1></div><span class="mode-label">Human vs Fly</span></header>
   <div class="workspace"><section class="board-workspace" aria-label="Chess game"><div class="player-strip" id="opponent"></div><div class="board" aria-label="Chessboard"></div><div class="player-strip" id="human"></div><p class="status game-status" role="status" aria-live="polite"></p><div class="promotion" hidden role="group" aria-label="Choose promotion"></div><section class="endgame-panel" role="dialog" aria-live="assertive" aria-labelledby="endgame-title" aria-describedby="endgame-reason" tabindex="-1" hidden><p class="eyebrow">GAME OVER</p><h2 id="endgame-title"></h2><p id="endgame-reason"></p><button id="endgame-restart" class="primary">Play again</button></section></section>
-  <aside class="context"><section class="game-controls"><div class="control-heading"><h2>Your game</h2><span class="badge">Loading…</span></div><p class="muted">The fly’s neural activity chooses its move.</p><div class="model-options"><label>Trained model<select id="model" disabled><option>Loading catalog…</option></select></label><p class="model-unavailable muted"></p></div><div class="mode-options"><label>Mode<select id="mode"><option value="human">Human vs Fly</option><option value="engine">Stockfish vs Fly</option></select></label><label><span id="side-label">Play as</span><select id="side"><option value="w">White</option><option value="b">Black</option></select></label></div><div class="game-options"><button id="new-game" class="primary" disabled>Restart</button><button id="pause" class="secondary" hidden>Pause</button><button id="step" class="secondary" hidden>One ply</button></div><button id="retry" class="primary" hidden>Retry loading</button><div class="model-summary"></div><div class="moves" aria-label="Move history"><span class="muted">Moves will appear here.</span></div><a class="engine-credit" href="/vendor/stockfish/NOTICE.txt">Stockfish source and license</a></section>
+  <aside class="context"><section class="game-controls"><div class="control-heading"><h2>Your game</h2><span class="badge">Loading…</span></div><p class="muted">The fly’s neural activity chooses its move.</p><div class="model-options"><label>Trained model<select id="model" disabled><option>Loading catalog…</option></select></label></div><div class="mode-options"><label>Mode<select id="mode"><option value="human">Human vs Fly</option><option value="engine">Stockfish vs Fly</option></select></label><label><span id="side-label">Play as</span><select id="side"><option value="w">White</option><option value="b">Black</option></select></label></div><div class="game-options"><button id="new-game" class="primary" disabled>Restart</button><button id="pause" class="secondary" hidden>Pause</button><button id="step" class="secondary" hidden>One ply</button></div><button id="retry" class="primary" hidden>Retry loading</button><div class="model-summary"></div><div class="moves" aria-label="Move history"><span class="muted">Moves will appear here.</span></div><a class="engine-credit" href="/vendor/stockfish/NOTICE.txt">Stockfish source and license</a></section>
   <section id="brain" class="brain-panel" aria-label="Live brain visualization"></section>
   <details class="decision-details"><summary>Decision details &amp; replay</summary><div id="decision-panel"></div></details></aside></div></main>`;
 const board = app.querySelector<HTMLElement>('.board')!;
@@ -297,16 +297,9 @@ function resetGame(): void {
 
 function populateModelOptions(): void {
   if (!modelCatalog) return;
-  modelSelect.innerHTML = modelCatalog.models.map(model => {
-    const suffix = model.availability === 'available'
-      ? `${model.trainingPreset} · ${model.trialsRun.toLocaleString()} trials`
-      : 'unavailable';
-    return `<option value="${model.id}" ${model.availability === 'unavailable' ? 'disabled' : ''}>${escapeHtml(model.label)} — ${escapeHtml(suffix)}</option>`;
-  }).join('');
-  const lite = modelCatalog.models.find(model => model.id === 'lite');
-  app.querySelector<HTMLElement>('.model-unavailable')!.textContent = lite?.availability === 'unavailable'
-    ? `Lite unavailable: ${lite.reason}`
-    : '';
+  modelSelect.innerHTML = modelCatalog.models
+    .map(model => `<option value="${model.id}">${escapeHtml(model.label)} — ${model.trainingPreset} · ${model.trialsRun.toLocaleString()} trials</option>`)
+    .join('');
 }
 
 function loadModel(modelId: ModelId): void {

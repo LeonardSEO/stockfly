@@ -75,11 +75,11 @@ test('timeline scrubbing returns each recorded step readout instead of repeating
   assert.throws(() => timeline.seek(2), /range/);
 });
 
-test('model truth badges distinguish complete, pruned and untrained models', () => {
+test('model truth badges accept Full models and reject removed variants', () => {
   assert.equal(modelTruthBadge('bio-full'), 'BIO FULL · complete MaleCNS');
   assert.equal(modelTruthBadge('max-full'), 'MAX FULL · complete MaleCNS');
-  assert.equal(modelTruthBadge('lite'), 'LITE · pruned MaleCNS subset');
   assert.equal(modelTruthBadge('untrained baseline'), 'UNTRAINED · complete MaleCNS baseline');
+  assert.throws(() => modelTruthBadge('lite'), /Unsupported/);
   assert.throws(() => modelTruthBadge('mystery'), /Unsupported/);
 });
 

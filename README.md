@@ -12,7 +12,6 @@ StockFly simulates the compiled Janelia MaleCNS v1.0 graph: **165,122 neurons an
 |---|---|---|
 | **Bio Full** | Quick preset, 4,934 training trials; learning restricted to the biological mask | Causal gate failed |
 | **Max Full** | Quick preset, 4,934 training trials; all synaptic magnitudes eligible for learning | Causal gate failed |
-| **Lite** | No checkpoint; disabled in the selector with a reason | Blocked until the Full causal prerequisite passes |
 
 “Full” describes stepping the complete compiled graph. It does not mean the causal gate passed. Topology and signs remain fixed during training; local plasticity changes synaptic magnitudes, without a trainable chess-policy layer after the graph.
 
@@ -25,7 +24,7 @@ The completed playing-strength ladder used the real quick checkpoints on Apple M
 ## Browser features
 
 - Human vs Fly and isolated Stockfish 19 Lite vs Fly exhibition modes, with side selection, restart, pause and one-ply controls.
-- Bio/Max selector backed by content-addressed checkpoint identities. Loading failures stay visible; models do not silently switch. Lite remains explicitly unavailable.
+- Bio/Max selector backed by content-addressed checkpoint identities. Loading failures stay visible; models do not silently switch.
 - Local SVG chess pieces, legal moves and promotions, move history, and a game-over dialog that identifies the winner or draw reason and offers another game.
 - Interactive 3D soma point cloud with real source annotations, filters, cell inspection and simulator activation. These are measured soma centroids, not full neuron skeletons. The visible geometry contains 140,024 neurons; all 165,122 participate in Full simulation.
 - Sample-specific from/to/promotion readouts, legal move scores, timeline scrubbing, integrity-checked JSON/binary trace export and import, and explicit CPU replay verification. Imported traces do not change the board.
@@ -91,7 +90,7 @@ node tools/models/publish-release.mjs --tag v0.1.0-experimental \
   --input dist/releases/BUILD_DIRECTORY/stockfly --out dist/model-release-v0.1.0-experimental
 ```
 
-The default is a local dry run. It writes content-addressed assets and `release-manifest.json` with each file's SHA-256, byte size, model kind, graph identity, training preset and attribution. The manifest retains **experimental / causal failed / Lite blocked** status and includes measured evidence. It refuses uncatalogued checkpoints, mismatched graph/checkpoint identities, symlinks and output reuse. An explicit `--publish` invokes `gh release create --prerelease`. This was used for `v0.1.0-experimental`; its verified macOS arm64 runtime ZIP was uploaded as an additional release asset. Future publication remains a separate explicit action.
+The default is a local dry run. It writes content-addressed assets and `release-manifest.json` with each file's SHA-256, byte size, model kind, graph identity, training preset and attribution. The manifest retains **experimental / causal failed** status and includes measured evidence. It refuses uncatalogued checkpoints, mismatched graph/checkpoint identities, symlinks and output reuse. An explicit `--publish` invokes `gh release create --prerelease`. This was used for `v0.1.0-experimental`; its verified macOS arm64 runtime ZIP was uploaded as an additional release asset. Future publication remains a separate explicit action.
 
 Focused verification:
 
@@ -125,7 +124,6 @@ Presets target smoke ≤10 minutes, quick ≤30 minutes, standard ≤2 hours and
 - [ ] Broad full-graph CPU/GPU numerical parity.
 - [x] Experimental GitHub publication, including model/runtime assets and the standard candidate sweep.
 - [ ] Windows runtime/browser validation.
-- [ ] StockFly Lite; blocked by the failed Full causal prerequisite.
 
 ## License
 

@@ -73,7 +73,7 @@ pub fn fetch_models(root: &Path, tag: Option<&str>, fixture_base: Option<&str>) 
     let mut response = ureq::get(format!("{base}/release-manifest.json")).call()?;
     let manifest_text = response.body_mut().read_to_string()?;
     let manifest: Value = serde_json::from_str(&manifest_text)?;
-    if manifest["formatVersion"] != 1 || manifest["releaseStatus"] != "experimental" || manifest["causalAuditStatus"] != "failed" || manifest["liteStatus"] != "blocked" {
+    if manifest["formatVersion"] != 1 || manifest["releaseStatus"] != "experimental" || manifest["causalAuditStatus"] != "failed" {
         return Err("only explicitly experimental, failed-causal-gate manifests are supported by this release".into());
     }
     if expected_tag.as_deref().is_some_and(|tag| manifest["tag"].as_str() != Some(tag)) { return Err("manifest tag differs from requested release".into()); }

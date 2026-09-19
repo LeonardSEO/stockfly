@@ -32,6 +32,7 @@ test('publisher validates a generated fixture manifest against the checked-in sc
   assert.equal(result.status, 0, result.stderr);
   const manifest = JSON.parse(await readFile(path.join(out, 'release-manifest.json'), 'utf8'));
   assert.doesNotThrow(() => validateReleaseManifest(manifest, schema));
+  assert.equal(Object.hasOwn(manifest, 'liteStatus'), false);
   for (const [change, expected] of [
     [value => { delete value.attribution; }, /required attribution/],
     [value => { value.files = []; }, /minItems/],

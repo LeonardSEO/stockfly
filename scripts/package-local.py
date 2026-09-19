@@ -83,7 +83,7 @@ def main():
     shutil.copy2(ROOT / 'target/release' / exe, bundle / exe)
     for source in ['LICENSE', 'THIRD_PARTY_NOTICES.md', 'README.md']:
         shutil.copy2(ROOT / source, bundle / source)
-    (bundle / 'EXPERIMENTAL.txt').write_text('Bio Full and Max Full failed causal acceptance. Full describes complete graph coverage, not validated strength. Lite is blocked. SHA-256 integrity is not a publisher signature. See README and data/release-evidence.\n')
+    (bundle / 'EXPERIMENTAL.txt').write_text('Bio Full and Max Full failed causal acceptance. Full describes complete graph coverage, not validated strength. SHA-256 integrity is not a publisher signature. See README and data/release-evidence.\n')
     if system == 'Windows':
         (bundle / 'Start StockFly.cmd').write_text('@echo off\r\ncd /d "%~dp0"\r\nstockfly-server.exe --open\r\npause\r\n')
         (bundle / 'Download models.cmd').write_text('@echo off\r\ncd /d "%~dp0"\r\nstockfly-server.exe fetch-models %*\r\npause\r\n')

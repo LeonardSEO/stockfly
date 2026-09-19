@@ -127,13 +127,6 @@ def main() -> None:
             **identity,
         })
 
-    entries.append({
-        "id": "lite",
-        "label": "Lite",
-        "expectedKind": "lite",
-        "availability": "unavailable",
-        "reason": "The Full causal prerequisite did not pass; no Lite checkpoint exists.",
-    })
     write_catalog(output_dir, {"formatVersion": 1, "models": entries})
     for entry in entries:
         if entry["availability"] == "available":

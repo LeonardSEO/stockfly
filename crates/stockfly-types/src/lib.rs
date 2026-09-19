@@ -1,14 +1,10 @@
 use serde::{Deserialize, Serialize};
 
-/// Which trained variant a checkpoint or trace belongs to.
-///
-/// Full and Lite must never be mixed in results, metrics, or visualization —
-/// see the "Full vs Lite" constraint in the design spec.
+/// Which trained Full variant a checkpoint or trace belongs to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ModelKind {
     BioFull,
     MaxFull,
-    Lite,
 }
 
 /// Stable original MaleCNS body ID for a neuron, preserved across compile,
@@ -70,5 +66,10 @@ mod tests {
         let json = serde_json::to_string(&m).unwrap();
         let restored: ModelManifest = serde_json::from_str(&json).unwrap();
         assert_eq!(m, restored);
+    }
+
+    #[test]
+    fn model_kind_rejects_removed_lite_variant() {
+        assert!(serde_json::from_str::<ModelKind>("\"Lite\"").is_err());
     }
 }

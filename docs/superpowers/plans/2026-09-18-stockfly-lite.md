@@ -1,5 +1,7 @@
 # StockFly Lite Distillation Implementation Plan
 
+> **Cancelled by the user (2026-09-19):** StockFly Lite is no longer product scope. This document is preserved as historical planning evidence and must not be implemented.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Produce a smaller browser-friendly StockFly Lite by pruning and quantizing the trained Full connectome while preserving original MaleCNS neuron/edge identities for every retained element.

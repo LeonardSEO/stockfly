@@ -24,10 +24,6 @@ const catalogDocument = () => ({
       trainingPreset: 'smoke', trialsRun: 498, graphNeuronsSha256: hash('b'),
       sensoryMapSha256: hash('c'), outputMapSha256: hash('d'),
     },
-    {
-      id: 'lite', label: 'Lite', expectedKind: 'lite', availability: 'unavailable',
-      reason: 'The Full causal prerequisite did not pass.',
-    },
   ],
 });
 
@@ -46,11 +42,14 @@ function checkpoint(modelKind = 'max-full'): string {
   });
 }
 
-test('catalog exposes fixed Bio and Max assets and an honest unavailable Lite entry', () => {
+test('catalog accepts exactly the two Full model identities', () => {
   const catalog = parseModelCatalog(catalogDocument());
   assert.equal(availableModel(catalog, 'bio-full').trainingPreset, 'quick');
   assert.equal(availableModel(catalog, 'max-full').trialsRun, 498);
-  assert.throws(() => availableModel(catalog, 'lite'), /Full causal prerequisite did not pass/);
+  assert.deepEqual(catalog.models.map(model => model.id), ['bio-full', 'max-full']);
+  const withLite = catalogDocument();
+  withLite.models.push({ id: 'lite', label: 'Lite', expectedKind: 'lite', availability: 'available' });
+  assert.throws(() => parseModelCatalog(withLite), /Unsupported model id: lite/);
 });
 
 test('checkpoint identity comes from content and rejects an incompatible model kind', () => {

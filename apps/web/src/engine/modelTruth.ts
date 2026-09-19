@@ -1,7 +1,6 @@
 const MODEL_TRUTH_BADGES = {
   'bio-full': 'BIO FULL · complete MaleCNS',
   'max-full': 'MAX FULL · complete MaleCNS',
-  lite: 'LITE · pruned MaleCNS subset',
   'untrained baseline': 'UNTRAINED · complete MaleCNS baseline',
 } as const;
 

@@ -9,7 +9,7 @@ import { spawn } from 'node:child_process';
 const binary = process.env.STOCKFLY_SERVER ?? path.resolve(`target/debug/stockfly-server${process.platform === 'win32' ? '.exe' : ''}`);
 const digest = data => createHash('sha256').update(data).digest('hex');
 const entry = (name, data) => ({ path: `data/checkpoints/${name}`, asset: name, size: Buffer.byteLength(data), sha256: digest(data), modelKind: 'bio-full', graphNeuronsSha256: 'a'.repeat(64), trainingPreset: 'quick' });
-const manifest = files => ({ formatVersion: 1, tag: 'fixture', releaseStatus: 'experimental', causalAuditStatus: 'failed', liteStatus: 'blocked', attribution: { maleCns: 'MaleCNS CC-BY', stockfish: 'Stockfish GPLv3' }, files });
+const manifest = files => ({ formatVersion: 1, tag: 'fixture', releaseStatus: 'experimental', causalAuditStatus: 'failed', attribution: { maleCns: 'MaleCNS CC-BY', stockfish: 'Stockfish GPLv3' }, files });
 async function fixture(t, doc, bodies) {
   const root = await mkdtemp(path.join(os.tmpdir(), 'stockfly-install-'));
   const requests = [];

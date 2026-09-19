@@ -1,5 +1,7 @@
 # StockFly Design Specification
 
+> **Historical scope update (2026-09-19):** The user cancelled StockFly Lite. The original Lite requirements below are preserved as historical design evidence and no longer apply to the current product.
+
 ## Goal
 
 Build a local, browser-first chess application in which a simulated full MaleCNS v1.0 fruit-fly connectome chooses chess moves, with live neural visualization and reproducible evidence that each move is caused by activity inside the fly model.

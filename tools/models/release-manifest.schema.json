@@ -2,13 +2,12 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "StockFly experimental release manifest",
   "type": "object",
-  "required": ["formatVersion", "tag", "releaseStatus", "causalAuditStatus", "liteStatus", "attribution", "files"],
+  "required": ["formatVersion", "tag", "releaseStatus", "causalAuditStatus", "attribution", "files"],
   "properties": {
     "formatVersion": {"const": 1},
     "tag": {"type": "string", "pattern": "^[A-Za-z0-9._-]+$"},
     "releaseStatus": {"const": "experimental"},
     "causalAuditStatus": {"const": "failed"},
-    "liteStatus": {"const": "blocked"},
     "attribution": {"type": "object", "required": ["maleCns", "stockfish"], "properties": {"maleCns": {"type": "string", "minLength": 1}, "stockfish": {"type": "string", "minLength": 1}}},
     "files": {"type": "array", "minItems": 1, "items": {"type": "object", "required": ["path", "asset", "size", "sha256", "modelKind", "graphNeuronsSha256", "trainingPreset"], "properties": {
       "path": {"type": "string", "pattern": "^data/(compiled/malecns-v1|checkpoints|browser-models|browser|chess-maps|release-evidence)/"},
