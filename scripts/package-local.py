@@ -103,7 +103,7 @@ def main():
     for source in ['LICENSE', 'THIRD_PARTY_NOTICES.md', 'README.md']:
         shutil.copy2(ROOT / source, bundle / source)
     copy_tree(ROOT / 'docs/releases', bundle / 'docs/releases')
-    (bundle / 'EXPERIMENTAL.txt').write_text('v0.3.0-standard preparation: Bio Standard seed 45 and Max Standard seed 43 both FAIL the post-FMA causal gate. The low-node ladder records 200/200 checkmate losses, with no finite point Elo. Native Apple M4 Metal parity passes the fixed 24-case suite only; browser WebGPU and Windows DX12 parity are unverified. Full describes complete graph coverage, not validated strength. Stockfish 19 Lite remains the external teacher/opponent. SHA-256 integrity is not a publisher signature. See README, docs/releases and data/release-evidence.\n')
+    (bundle / 'EXPERIMENTAL.txt').write_text('v0.3.1-standard experimental prerelease: Bio Standard seed 45 and Max Standard seed 43 both FAIL the post-FMA causal gate. The low-node ladder records 200/200 checkmate losses, with no finite point Elo. Native Apple M4 Metal parity passes the fixed 24-case suite only; browser WebGPU and Windows DX12 parity are unverified. Full describes complete graph coverage, not validated strength. Stockfish 19 Lite remains the external teacher/opponent. Native installer network waits are bounded. SHA-256 integrity is not a publisher signature. See README, docs/releases and data/release-evidence.\n')
     if system == 'Windows':
         (bundle / 'Start StockFly.cmd').write_text('@echo off\r\ncd /d "%~dp0"\r\nstockfly-server.exe --open\r\npause\r\n')
         (bundle / 'Download models.cmd').write_text('@echo off\r\ncd /d "%~dp0"\r\nstockfly-server.exe fetch-models %*\r\npause\r\n')
