@@ -27,3 +27,5 @@ python3 tools/parity/publish.py data/reports/standard-validation-2026-09-19/full
 ```
 
 The publisher verifies matching protocol and input identities, retains baseline/final per-step metrics and identities, and counts pre/post Metal state-hash matches. It refuses to overwrite an existing report. Actual legal-score triples remain in the identified immutable raw files; the tracked JSON keeps their comparison metrics and exact moves.
+
+Explicit WGSL `fma` requests the intended arithmetic, but does not impose portable IEEE fused, single-rounding evaluation: [WGSL permits separate multiply and add](https://www.w3.org/TR/WGSL/#fma-builtin), whereas [Rust `mul_add`](https://doc.rust-lang.org/std/primitive.f32.html#method.mul_add) specifies a fused result. The observed single-rounding and parity evidence here apply to the measured Apple M4 Metal backend. Other backends require their own measurements against the unchanged tolerances.

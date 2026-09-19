@@ -12,7 +12,7 @@ The Metal compiler contracted multiplication plus addition into FMA, while the C
 
 All 408/408 pre/post-fix Metal state hashes match, including batched finals. Metal behavior is unchanged on this suite, while CPU rounding changes. Historical pre-fix CPU causal results cannot represent the corrected executable; fresh CPU audits are required for post-fix release claims. Native Metal parity does not establish browser WebGPU or Windows DX12 equivalence.
 
-The twelve cases include both sides to move, initial boards, tactical/castling positions, en passant, all promotion choices, check evasion, sparse pawn/rook endgames and a closed middlegame. Every position is nonterminal and starts at zero state. Promotion-white, check-evasion, pawn-endgame and closed-middlegame remain numerically equal even before the fix; those easier cases are retained. This fixture is numerical evidence, not playing strength, held-out accuracy or a guarantee for every possible FEN.
+The twelve cases include both sides to move, initial boards, tactical/castling positions, en passant, all promotion choices, check evasion, sparse pawn/rook endgames and a closed middlegame. Every position is nonterminal and starts at zero state. Promotion-white, check-evasion, pawn-endgame and closed-middlegame already passed the declared tolerances before the fix, with identical rates and policy scores. Their baseline maximum membrane differences were 0.0001220703125, 0.0001220703125, 0.00018310546875 and 0.00048828125 respectively for both models; those easier cases and their small differences are retained. This fixture is numerical evidence, not playing strength, held-out accuracy or a guarantee for every possible FEN.
 
 ## Per-position maxima
 

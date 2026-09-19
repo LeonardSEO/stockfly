@@ -97,8 +97,8 @@ impl<'a> CpuSimulator<'a> {
             let mut input = 0.0f32;
             for e in start..end {
                 let src = edge_src[e] as usize;
-                // Explicit f32 FMA matches the shader; separate rounding drifts
-                // through the recurrent graph after cancellation.
+                // Match the fused arithmetic observed on Apple M4 Metal.
+                // Separate multiply/add rounding drifts through recurrent cancellation.
                 input = edge_weight[e].mul_add(prev_rate[src], input);
             }
             let stim = stimulus.values.get(dst).copied().unwrap_or(0.0);

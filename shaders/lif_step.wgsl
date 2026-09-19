@@ -23,7 +23,8 @@ fn step(@builtin(global_invocation_id) global_id: vec3<u32>) {
     }
 
     let gathered_input = next_state[neuron].membrane;
-    // One rounding for decay plus recurrent input, then sensory addition.
+    // Request fused decay plus recurrent input, then sensory addition.
+    // Apple M4 Metal measured single rounding; WGSL does not guarantee it.
     let membrane = fma(previous_state[neuron].membrane, params.decay, gathered_input)
         + stimulus[neuron];
     let rate = clamp(membrane - params.threshold, 0.0, params.max_rate);
