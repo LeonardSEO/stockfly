@@ -1,0 +1,23 @@
+{
+  "formatVersion": 1,
+  "expectedState": {
+    "title": "StockFly",
+    "badge": "Unavailable",
+    "instructionContains": [
+      "Download pretrained model:",
+      ".\\stockfly-server.exe fetch-models",
+      "No training is required."
+    ]
+  },
+  "expectedMissingRoutes": [
+    "/vendor/models/catalog.json",
+    "/vendor/graph/manifest.json",
+    "/vendor/graph/neurons.bin",
+    "/vendor/graph/geometry_lod0.bin",
+    "/vendor/brain/metadata.json"
+  ],
+  "unexpectedMissingRoutes": [
+    "/favicon.svg",
+    "/assets/missing.js"
+  ]
+}

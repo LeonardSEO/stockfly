@@ -51,6 +51,8 @@ def main():
     app = stage / 'build-app'
     bundle.mkdir()
     shutil.copytree(ROOT / 'apps/web', app, ignore=shutil.ignore_patterns('node_modules', 'dist', 'public', 'wasm-gen'))
+    (app / 'public').mkdir()
+    shutil.copy2(ROOT / 'apps/web/public/favicon.svg', app / 'public/favicon.svg')
     copy_tree(ROOT / 'apps/web/public/pieces', app / 'public/pieces')
     stockfish = app / 'public/vendor/stockfish'
     stockfish.mkdir(parents=True)
