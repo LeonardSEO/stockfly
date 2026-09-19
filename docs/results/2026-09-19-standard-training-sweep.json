@@ -1,0 +1,49 @@
+{
+  "date": "2026-09-19",
+  "status": "experimental-candidates",
+  "activeModelCatalogChanged": false,
+  "preset": {
+    "name": "standard",
+    "settleSteps": 16,
+    "baselineBudgetSeconds": 1800,
+    "learningBudgetSeconds": 7200,
+    "backend": "cpu-reference"
+  },
+  "curriculum": {
+    "positions": 24584,
+    "labeler": "Stockfish 19",
+    "baseSha256": "14f8614c11702c7b31275324de5642259baa11c02f2c6726482a7d2e9dcfb991",
+    "orderingSha256": {
+      "42": "14f8614c11702c7b31275324de5642259baa11c02f2c6726482a7d2e9dcfb991",
+      "43": "1b6ab16b12451c2bb17e25f9dc554430a53f61f874dd7583ae6abf71c1aba7e4",
+      "44": "8f8655c62d39ee56eddb9db04319a24bbab1a43ec61b5cbbda3da414240140ed",
+      "45": "6f0eb0fdfbdbcf5ade25361a3e8992cf94144fec3e0e056d9e832c116b9d9918",
+      "46": "976ff1fb08e89749afc6c61095df0ae4974d0ad51e9f0afd1354df99b055acf1"
+    }
+  },
+  "identity": {
+    "graphNeuronsSha256": "cb1bd8c967056afe8e1ae667df9f0d99c59cac365d1660ed61b142caca5c6405",
+    "sensoryMapSha256": "fb5ba4e541b13a34a50973a0760de2b056ed4ac7a2d81425b199c095cdf569b5",
+    "outputMapSha256": "cd6af3b0961c9e096938a9f1802ec32c00d6afb6c9a0125cf72162c64448e5b2"
+  },
+  "candidates": [
+    {"kind":"bio-full","seed":42,"baselineTrials":2352,"baselineTop1":0.0646,"trialsRun":6903,"trainingTop1":0.0527,"deltaEdges":1148735,"bytes":17102095,"sha256":"2c8c8af058866d129452952e1ea43ee6b13abe57facd2d7f0db0b0dc24433723","file":"stockfly-bio-full-standard-seed42.sfckpt"},
+    {"kind":"bio-full","seed":43,"baselineTrials":2187,"baselineTop1":0.1011,"trialsRun":6925,"trainingTop1":0.0976,"deltaEdges":1153039,"bytes":17184094,"sha256":"6ab727d8133fcec67013738bb109e10612aa8bac6929870ae79f695951c9a699","file":"stockfly-bio-full-standard-seed43.sfckpt"},
+    {"kind":"bio-full","seed":44,"baselineTrials":2181,"baselineTop1":0.0940,"trialsRun":6918,"trainingTop1":0.0987,"deltaEdges":1148131,"bytes":17095869,"sha256":"5187403340c08e6950367e084cb5074a072516fc77a657c3329dcd1f5b3602ed","file":"stockfly-bio-full-standard-seed44.sfckpt"},
+    {"kind":"bio-full","seed":45,"baselineTrials":2180,"baselineTop1":0.0982,"trialsRun":6898,"trainingTop1":0.1050,"deltaEdges":1150563,"bytes":17131866,"sha256":"5e2094743fe960f307d4a39647afbd05682e47867f3a4e771a24f9634d01b3c5","file":"stockfly-bio-full-standard-seed45.sfckpt"},
+    {"kind":"bio-full","seed":46,"baselineTrials":2168,"baselineTop1":0.0950,"trialsRun":6953,"trainingTop1":0.1023,"deltaEdges":1150740,"bytes":17133590,"sha256":"868300721b6cd7f383523d2cba58edd7b0d5f897be7c38b9e80aa6d6ce7772d0","file":"stockfly-bio-full-standard-seed46.sfckpt"},
+    {"kind":"max-full","seed":42,"baselineTrials":2360,"baselineTop1":0.0644,"trialsRun":5566,"trainingTop1":0.0392,"deltaEdges":8075729,"bytes":127568896,"sha256":"fcc2845cd92eabcd794d8c6c296f78e7a34584558937a3cda2b2b7b76e3a9bc4","file":"stockfly-max-full-standard-seed42.sfckpt"},
+    {"kind":"max-full","seed":43,"baselineTrials":2183,"baselineTop1":0.1008,"trialsRun":5649,"trainingTop1":0.0993,"deltaEdges":8550866,"bytes":137312951,"sha256":"a10de3f743ba9b0a2f590ba2a19fae794c0da615facd54e1b88d1595cd1c0bd3","file":"stockfly-max-full-standard-seed43.sfckpt"},
+    {"kind":"max-full","seed":44,"baselineTrials":2172,"baselineTop1":0.0944,"trialsRun":5658,"trainingTop1":0.0935,"deltaEdges":8393536,"bytes":133420113,"sha256":"e67f271aa6c1117ac70140881bee1099d391ecd055ebdb991450ebce73d7d2bb","file":"stockfly-max-full-standard-seed44.sfckpt"},
+    {"kind":"max-full","seed":45,"baselineTrials":2177,"baselineTop1":0.0983,"trialsRun":5651,"trainingTop1":0.0911,"deltaEdges":8290173,"bytes":131762111,"sha256":"3d1a38facbf1d74a9c965db6b548b03370c0b3b12503c9806a282959003bf480","file":"stockfly-max-full-standard-seed45.sfckpt"},
+    {"kind":"max-full","seed":46,"baselineTrials":2164,"baselineTop1":0.0952,"trialsRun":5661,"trainingTop1":0.0963,"deltaEdges":8311452,"bytes":133673480,"sha256":"b08cfe84e6a25ca740a903fe128885459c54f3438b824514d8adc901e8d4f3ff","file":"stockfly-max-full-standard-seed46.sfckpt"}
+  ],
+  "selection": {
+    "highestOnlineBioSeed": 45,
+    "largestSameOrderBioImprovementSeed": 46,
+    "highestOnlineMaxSeed": 43,
+    "onlyPositiveSameOrderMaxImprovementSeed": 46,
+    "promoted": false,
+    "reason": "Online training-stream agreement is not a held-out causal audit or Elo result."
+  }
+}

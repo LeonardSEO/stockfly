@@ -18,6 +18,8 @@ StockFly simulates the compiled Janelia MaleCNS v1.0 graph: **165,122 neurons an
 
 The frozen 175-position audit measured teacher top-1 agreement of **24/175 for Bio**, versus 23 reset, 28 shuffled and 25 brain bypass; **18/175 for Max**, versus 23 reset, 22 shuffled and 25 brain bypass. Those controls do not support a causal acceptance claim. Region-ablation and output-permutation controls also run and are recorded. Teacher agreement is not Elo. Max's 10.17% online training agreement (4,934 trials) is also a different metric; its 8.92% untrained stream baseline covered 2,198 trials.
 
+An additional ten-run `standard` candidate sweep completed on 19 September: five deterministic curriculum orderings each for Bio and Max, with two hours of learning per candidate. The best online scores were 10.50% for Bio and 9.93% for Max, but these are order-dependent training-stream measurements. The candidates are published separately and have not replaced the audited quick checkpoints. See the [full sweep table and identities](docs/results/2026-09-19-standard-training-sweep.md).
+
 The completed playing-strength ladder used the real quick checkpoints on Apple M4 Metal at **16 settling steps**, with ten paired openings per condition. Each model played 140 intact games across Stockfish 19 Lite budgets of 50, 100, 250, 500, 1,000, 2,000 and 5,000 nodes/move, plus 80 control games at 50 nodes/move. All **440/440** games ended in checkmate losses; none were excluded or timed out. Every 20-game row is 0 wins, 0 draws, 20 losses. There is **no finite point Elo estimate**. Each row's one-sided 95% score upper bound is 0.387, corresponding to a local Elo-difference upper bound of about −80 against that exact opponent condition. This is not a human or absolute rating, and these floor results cannot rank Bio, Max or their controls. See the [full table and limitations](docs/results/2026-09-18-playing-strength.md) and [model/audit identities](docs/results/2026-09-18-model-summary.json).
 
 ## Browser features
@@ -121,7 +123,8 @@ Presets target smoke ≤10 minutes, quick ≤30 minutes, standard ≤2 hours and
 - [x] Experimental manifest installer/publisher and local portable macOS/Windows packaging automation.
 - [ ] Successful Full causal acceptance and demonstrated playing-strength improvement.
 - [ ] Broad full-graph CPU/GPU numerical parity.
-- [ ] Actual GitHub publication and Windows runtime/browser validation.
+- [x] Experimental GitHub publication, including model/runtime assets and the standard candidate sweep.
+- [ ] Windows runtime/browser validation.
 - [ ] StockFly Lite; blocked by the failed Full causal prerequisite.
 
 ## License
