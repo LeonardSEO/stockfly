@@ -1,10 +1,24 @@
 //! Release integrity installer. Hashes identify content; they are not signatures.
-use std::{fs, io::{self, Read, Write}, path::{Component, Path, PathBuf}};
+use std::{fs, io::{self, Read, Write}, path::{Component, Path, PathBuf}, time::Duration};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 const REPOSITORY: &str = "LeonardSEO/stockfly";
+const CONNECT_TIMEOUT: Duration = Duration::from_secs(15);
+const REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
+const RESPONSE_TIMEOUT: Duration = Duration::from_secs(30);
+const BODY_TIMEOUT: Duration = Duration::from_secs(30 * 60);
+
+fn release_agent() -> ureq::Agent {
+    ureq::Agent::new_with_config(ureq::Agent::config_builder()
+        .timeout_global(Some(BODY_TIMEOUT))
+        .timeout_connect(Some(CONNECT_TIMEOUT))
+        .timeout_send_request(Some(REQUEST_TIMEOUT))
+        .timeout_recv_response(Some(RESPONSE_TIMEOUT))
+        .timeout_recv_body(Some(BODY_TIMEOUT))
+        .build())
+}
 
 fn checked_path(root: &Path, relative: &str) -> Result<PathBuf> {
     let allowed = ["data/compiled/malecns-v1/", "data/checkpoints/", "data/browser-models/", "data/browser/", "data/chess-maps/", "data/release-evidence/"];
@@ -45,6 +59,7 @@ fn sha(value: &str) -> bool { value.len() == 64 && value.bytes().all(|b| b.is_as
 pub fn fetch_models(root: &Path, tag: Option<&str>, fixture_base: Option<&str>) -> Result<()> {
     fs::create_dir_all(root)?;
     let root = root.canonicalize()?;
+    let agent = release_agent();
     let (base, expected_tag) = if let Some(base) = fixture_base {
         let authority = base.strip_prefix("http://127.0.0.1:").ok_or("fixture URL must use http://127.0.0.1:PORT")?;
         if authority.parse::<u16>().is_err() { return Err("invalid fixture port".into()); }
@@ -55,7 +70,7 @@ pub fn fetch_models(root: &Path, tag: Option<&str>, fixture_base: Option<&str>) 
             Some(_) => return Err("tag must contain only letters, digits, dot, underscore or hyphen".into()),
             None => "?per_page=100".to_string(),
         };
-        let mut response = ureq::get(format!("https://api.github.com/repos/{REPOSITORY}/releases{}", if endpoint.starts_with('?') { endpoint.clone() } else { format!("/{endpoint}") }))
+        let mut response = agent.get(format!("https://api.github.com/repos/{REPOSITORY}/releases{}", if endpoint.starts_with('?') { endpoint.clone() } else { format!("/{endpoint}") }))
             .header("User-Agent", "StockFly-model-installer").call()?;
         let release: Value = serde_json::from_str(&response.body_mut().read_to_string()?)?;
         // GitHub's /latest excludes prereleases. Experimental model releases are
@@ -70,7 +85,7 @@ pub fn fetch_models(root: &Path, tag: Option<&str>, fixture_base: Option<&str>) 
         if !resolved.bytes().all(|c| c.is_ascii_alphanumeric() || b"._-".contains(&c)) { return Err("unsafe release tag".into()); }
         (format!("https://github.com/{REPOSITORY}/releases/download/{resolved}"), Some(resolved.to_owned()))
     };
-    let mut response = ureq::get(format!("{base}/release-manifest.json")).call()?;
+    let mut response = agent.get(format!("{base}/release-manifest.json")).call()?;
     let manifest_text = response.body_mut().read_to_string()?;
     let manifest: Value = serde_json::from_str(&manifest_text)?;
     if manifest["formatVersion"] != 1 || manifest["releaseStatus"] != "experimental" || manifest["causalAuditStatus"] != "failed" {
@@ -102,7 +117,7 @@ pub fn fetch_models(root: &Path, tag: Option<&str>, fixture_base: Option<&str>) 
         if target.is_file() && digest(&target)? == expected { println!("Verified existing {relative}"); continue; }
         let temporary = stage.path().join(i.to_string());
         let mut output = fs::File::create(&temporary)?;
-        let mut response = ureq::get(format!("{base}/{}", string(file, "asset")?)).call()?;
+        let mut response = agent.get(format!("{base}/{}", string(file, "asset")?)).call()?;
         // Bound each transfer to its declared size plus one byte, detecting oversized downloads.
         io::copy(&mut response.body_mut().as_reader().take(expected.1.saturating_add(1)), &mut output)?;
         output.flush()?;
@@ -123,4 +138,19 @@ pub fn fetch_models(root: &Path, tag: Option<&str>, fixture_base: Option<&str>) 
     }
     println!("Download complete. Start StockFly, or retry model loading in the browser.");
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn release_requests_have_bounded_network_phases() {
+        let timeouts = release_agent().config().timeouts();
+        assert_eq!(timeouts.global, Some(BODY_TIMEOUT));
+        assert_eq!(timeouts.connect, Some(CONNECT_TIMEOUT));
+        assert_eq!(timeouts.send_request, Some(REQUEST_TIMEOUT));
+        assert_eq!(timeouts.recv_response, Some(RESPONSE_TIMEOUT));
+        assert_eq!(timeouts.recv_body, Some(BODY_TIMEOUT));
+    }
 }
