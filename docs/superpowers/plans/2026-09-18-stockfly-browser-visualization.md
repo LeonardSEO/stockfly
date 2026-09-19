@@ -1,5 +1,7 @@
 # StockFly Browser & Neural Visualization Implementation Plan
 
+> **Cancelled by the user (2026-09-19):** StockFly Lite is no longer product scope. This document is preserved as historical planning evidence; its original Lite instructions must not be implemented.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Deliver a fully local browser experience on macOS and Windows with Human vs StockFly, Stockfish 19 Lite vs StockFly, and live visualization of the exact neural activity driving each move.

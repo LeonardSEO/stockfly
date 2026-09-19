@@ -7,6 +7,11 @@
 - Preserved Stockfish 19 Lite as the external teacher/opponent, including its worker, vendor assets, attribution, and historical results.
 - Added cancellation notices to the historical StockFly Lite plan and design specification without rewriting their original evidence.
 
+## Fix round 1
+
+- Added the same dated user-cancellation banner to the independently consumable historical master, browser visualization, and foundation/connectome plans.
+- Reviewed every historical plan/specification containing `lite`: the remaining training and audit plans refer only to Stockfish 19 Lite, while the current validation plan defines Lite removal. No additional active StockFly Lite plan required a banner.
+
 ## Validation
 
 - `node --experimental-strip-types --test apps/web/src/engine/modelCatalog.test.ts apps/web/src/traces/MoveTrace.test.ts` — 12 passed.
@@ -18,3 +23,8 @@
 - `cargo build -p stockfly-server && node --test tools/models/test-fetch-release.mjs` — 11 passed.
 
 The Vite build retained its existing bundle-size warning; it completed successfully.
+
+## Fix round 1 validation
+
+- `git diff --check` — passed.
+- Historical plan/spec search — confirmed every historical document with active StockFly Lite scope has a dated cancellation banner; Stockfish 19 Lite references and historical measurements were unchanged.
