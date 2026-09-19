@@ -1,0 +1,972 @@
+{
+  "summary_version": 1,
+  "acceptance_rule": {
+    "description": "Project gate; not a universal neuroscience standard.",
+    "top1": "Intact strictly exceeds every control.",
+    "top3": "Intact is not below any control.",
+    "paired_test": "One-sided exact McNemar: P[Binomial(b+c, 0.5) >= b] < 0.05.",
+    "b": "Intact correct and control incorrect.",
+    "c": "Intact incorrect and control correct.",
+    "ties": "Test every control tied for highest control top-1; all must pass.",
+    "alpha": 0.05
+  },
+  "provenance": {
+    "measurement_date": "2026-09-19",
+    "backend": "CPU reference (CpuSimulator), single process per checkpoint; four simulated conditions plus output permutation and random sensory bypass",
+    "machine": {
+      "cpu": "Apple M4",
+      "os": "ProductName:\t\tmacOS\nProductVersion:\t\t27.0\nBuildVersion:\t\t26A428",
+      "architecture": "arm64"
+    },
+    "binary_path": "data/reports/standard-validation-2026-09-19/causal-audit-frozen/stockfly-train",
+    "binary_sha256": "852bf41e3c2cd0a81a1e390f1e5576cca8f3389751fbfc96de3cb91ed272d5b6",
+    "binary_origin": "Copied exclusively from target/release/stockfly-train before concurrent rebuilds; existing release artifact dated 2026-09-18 20:22 local time.",
+    "source_snapshot_commit": "f260d6687d055f127288043f3de04bf65d215cab",
+    "source_snapshot_tree": "0854d6a3923dc8edd25a55d5c67f33c70ffa06f2",
+    "source_files_sha256": {
+      "Cargo.lock": "002f06b5f579efaa7c35cde2ba8c00920bc8c82bad7121a6e7c5d20931f1fd9c",
+      "Cargo.toml": "0e34eb3f6f9e4077ae5a3a5b45dd113f64ebcddcda7015c5b82ee7ddc71421a3",
+      "crates/stockfly-chess/Cargo.toml": "2d30ecc84e6305a1853d49c7142af33cfb072b80d7ce9c73820207035054dac9",
+      "crates/stockfly-chess/resources/output-map.json": "cd6af3b0961c9e096938a9f1802ec32c00d6afb6c9a0125cf72162c64448e5b2",
+      "crates/stockfly-chess/resources/sensory-map.json": "fb5ba4e541b13a34a50973a0760de2b056ed4ac7a2d81425b199c095cdf569b5",
+      "crates/stockfly-chess/src/lib.rs": "05d8ffe4b33f43dc0c60556c645adb87d582172937306134f2f202857f4653de",
+      "crates/stockfly-chess/src/output_map.rs": "2e3cc675bb7a6f6871f24ff94a19eac0c6a6474f07445a560205fb9c3dd816da",
+      "crates/stockfly-chess/src/policy.rs": "37a8fd2c25db8b55879186673d68a8ba34d2e92e453b3e23883a55d11e920134",
+      "crates/stockfly-chess/src/sensory.rs": "6cb9653547d63c9af5b20b09ece856e1f15da34a8bd46407083cc0c3a49a3e3c",
+      "crates/stockfly-chess/tests/output_map.rs": "0f95e1bec20c58fb3af3a7961a57777d931fb172c42ad1a4de76573279a3338c",
+      "crates/stockfly-chess/tests/policy.rs": "7801f36242dba8d2da2fa473356d6f71f63cd23f09905343c7558f76105ce95a",
+      "crates/stockfly-chess/tests/sensory.rs": "2b2faa51e218d2abf47503a4f9c8bd7f44cf79ee20d25d7bfe8601065b4f8851",
+      "crates/stockfly-connectome/Cargo.toml": "0280415afd034fd5fd9c5322e365cad9394aa515bea3c43f9b7bcfa07bf4aa17",
+      "crates/stockfly-connectome/examples/validate.rs": "8606acefce26b1b98ba2823460decec0afb7ef54971c246ae3f915d3955d0b52",
+      "crates/stockfly-connectome/src/format.rs": "491ba594d0d5ec90d68adf726699b8bb3565e010fbba89d67809d8fa5dcd4b7c",
+      "crates/stockfly-connectome/src/lib.rs": "6029c2a03c32176b573b748d4c9504f754ee02c5f300577d5921f85216801840",
+      "crates/stockfly-connectome/tests/load_fixture.rs": "60f81b10cc925e8b7102036fdeb3f101fe7e9c50fb17223186a9053ce88783dd",
+      "crates/stockfly-plasticity/Cargo.toml": "9f7ee2fa7211f2ca2968ce17f2118983da09bb09bcdeed2d8fcfca0c117d2f20",
+      "crates/stockfly-plasticity/src/bio.rs": "38c7d1f8e8e902cfbfc0e44d8e44a9723392ee8e68ad12930e00cf15527d2afb",
+      "crates/stockfly-plasticity/src/lib.rs": "2a47d63e131671c374f515c3f6f00c13768dd3bbfd2f8f801db4cf2f29923cdb",
+      "crates/stockfly-plasticity/src/max.rs": "ed6c2113451860e2cb596f25696fb44bb4d5ade8add858cc8fea8e922ff9b7f3",
+      "crates/stockfly-plasticity/tests/update.rs": "4ca5a27ca9a54011e1a04509c25c1687c9fd8953b0f0c995c43ac17752d902f2",
+      "crates/stockfly-sim/Cargo.toml": "67e4fb2a0009be8f23f2e677e44e6f0f507926f02fa8c9a131292973e9f1c1d3",
+      "crates/stockfly-sim/examples/benchmark.rs": "6110634d18dae7c7a61e86c0cb0aaab29862800329b95740d8054d6f5c154033",
+      "crates/stockfly-sim/src/cpu.rs": "73f02533d55848e9be51b69a5e161c48c38d6918a527b2832371dafbb61925ee",
+      "crates/stockfly-sim/src/gpu.rs": "91cfac56ae1b29b84f6e97c68774a3ed2055a332be4b26fe54d1a2b639513972",
+      "crates/stockfly-sim/src/gpu_buffers.rs": "852437b54df4d94b06de742ec05e9db764fc2d9450e8d558677a3d4f6168243e",
+      "crates/stockfly-sim/src/lib.rs": "bfa1129b5b4e9b2a430ceb180bc9e102f0f7a0237fde95edf875be6ff6f0b840",
+      "crates/stockfly-sim/src/state.rs": "c5efcc0f12836a0960e6b4d556c6e1f8229892d6240aff2499689d9f884a39d9",
+      "crates/stockfly-sim/tests/cpu_fixture.rs": "ca2da73d512bf998c3770e8414031ad7053ee37f41351ec6e54578850f47d315",
+      "crates/stockfly-sim/tests/gpu_parity.rs": "b01d9c1b20143595a22c081bd8090db50ab7719c31e357d2c2564181a6f66c92",
+      "crates/stockfly-train/Cargo.toml": "821ff63fa1a7d9d477c4c5ca2a37ff630fd317979d9080c84a2ac448b4207b6c",
+      "crates/stockfly-train/resources/ladder.json": "eac135535bf2c2da82c7a2483bdeaf7088f970b5544975d697a7ddadef08f995",
+      "crates/stockfly-train/src/audit.rs": "7b95ec5b0800a7636638a09a13acfb5db7cee7e19389209ed73d09849b8ed6e0",
+      "crates/stockfly-train/src/audit/ablation.rs": "f7407ac061a2eb3ee7f868d2a4683528328231373ec5a76254774bebfb793658",
+      "crates/stockfly-train/src/audit/bypass.rs": "3517e4be4a2b480c2f45032737d4bb34d390139537b61b23ee74973d890d54f5",
+      "crates/stockfly-train/src/audit/hashes.rs": "0f6dc47d087e37b38013b11ac3b0b82b7cc86553389551a905b68d98490e86de",
+      "crates/stockfly-train/src/audit/output_permutation.rs": "5b23fea5cf004d72a4bbe8ce89f0ed38389b6813791a4412f38b81f3b1497a6b",
+      "crates/stockfly-train/src/audit/reset.rs": "adc15d9a73b88be7b103b3bc5e9a3a58e1ca58adf02d3c18476f98bc3301422c",
+      "crates/stockfly-train/src/audit/shuffle.rs": "9a5e84d91be6730f967eb6137ad30430cecc1bdec75af9214b86e217f0831b8c",
+      "crates/stockfly-train/src/checkpoint.rs": "41fb0f96d10070f926a08fd6101c8926f71b762b36c78f1887fa33eef4c6ee00",
+      "crates/stockfly-train/src/elo.rs": "9fc6bf5f3e7f2154611e8b711f629dd173074225ce024c01e2f9880948a48889",
+      "crates/stockfly-train/src/ladder_infer.rs": "2f03d1f57423dc753d1b258df97358bda69e5b6d06dd622690368470a8868dcd",
+      "crates/stockfly-train/src/lib.rs": "e45e2e943605f7270446337dee3f94d7de1bc0c9e270b2c1bbc18ee6666a8354",
+      "crates/stockfly-train/src/main.rs": "f9e34cea5ac4cf572186d13f1c6780f8c3b2dfb8599b0bd430c9465a7ea3973f",
+      "crates/stockfly-train/src/presets.rs": "e926f01bed79909fa68840463533f48e65abf1f6e31ac9f0388ec227199d8233",
+      "crates/stockfly-train/src/train.rs": "1b25f66e91e33cd91bcd7366511a46ea02f867d99f2959af95c9876387da0f8b",
+      "crates/stockfly-train/tests/controls.rs": "e5fb33fe6d71de601b3646a0c0edb4c0da395da57db37a417d6bfd171286cee6",
+      "crates/stockfly-train/tests/elo.rs": "93101a72520dbdf0961578e7ee37721a12a4e3de410fef9c3bae6e1fc8d2923c",
+      "crates/stockfly-train/tests/native_hashes.rs": "b3bb2cd405e356bfe6ecc94b3f0fd7d20f2f033e7e2ab214a698fd5df30a1f2c",
+      "crates/stockfly-train/tests/no_teacher.rs": "449b131b919621a40fdbf777fad51e4acf6a1b61de265e7e6fb2f82b5ec96e2b",
+      "crates/stockfly-train/tests/weight_reset.rs": "37c621a72ab73fffa0c61e0d5ae441d894609b860d97bac087e95725ce9182d4",
+      "shaders/csc_gather.wgsl": "5ac1a552787930a713d17b913ca64013eb085b086d982f042cf87a02cdc082f3",
+      "shaders/lif_step.wgsl": "61c80d364c9fa0008dd5b43505cb800ffa504defee77e1831c58ed060fdb467d",
+      "tools/audit/causal_controls.py": "3ab89f38421b01466ce7e067aacb2cb0f3293bb229e7205b333679df8a2d3b35",
+      "tools/audit/weight_reset.py": "8eb04b03148e428423a5d2c2b8c6f4d00e00f2f8202b8720907491778479de3a"
+    },
+    "source_manifest_sha256": "23b50af05851a68b8a313fa4cbcac2f0bed380f350837593125c7e1333ebbd0f",
+    "source_provenance_limitation": "The pre-existing release binary has no embedded build commit. The recorded source commit and file hashes describe the repository snapshot at freezing, not cryptographic proof of the build source.",
+    "suite_path": "tests/fixtures/chess-suite.json",
+    "graph_path": "data/compiled/malecns-v1",
+    "maps_path": "crates/stockfly-chess/resources",
+    "metadata_path": "data/reports/malecns-v1-audit-metadata.json",
+    "selected_checkpoints": {
+      "bio_full": "data/training-runs/bio-standard-seed45-2026-09-18/stockfly-bio-full-standard-seed45.sfckpt",
+      "max_full": "data/training-runs/max-standard-seed43-2026-09-18/stockfly-max-full-standard-seed43.sfckpt"
+    },
+    "standard_curriculum_overlap": {
+      "path": "data/teacher/standard.jsonl",
+      "sha256": "14f8614c11702c7b31275324de5642259baa11c02f2c6726482a7d2e9dcfb991",
+      "suite_unique_fens": 170,
+      "exact_fen_overlap": 33,
+      "interpretation": "Suite membership overlaps the available Standard curriculum; actual consumed examples vary with the training time cap. These are not certified held-out results."
+    },
+    "acceptance_rule_preregistration": "docs/superpowers/plans/2026-09-19-standard-validation-release.md, Task 2; recorded before these measurements."
+  },
+  "reports": [
+    {
+      "raw_report": "data/reports/standard-validation-2026-09-19/causal-audit-frozen/bio-standard-seed45.json",
+      "raw_report_sha256": "03caa9b606193e477409ad83ac5e2cb05df0fc5da901bcfaa3147e94d43c79d7",
+      "model_kind": "bio-full",
+      "inputs": {
+        "binary_sha256": "852bf41e3c2cd0a81a1e390f1e5576cca8f3389751fbfc96de3cb91ed272d5b6",
+        "graph_files": {
+          "edge_src_blocks/0000.bin": "1f325756abd3fd9bdfa30e3bbcd4cb0f6b05d0c96e7f022451215cde89b822b1",
+          "edge_src_blocks/0001.bin": "5a4ae0cf3b2ff0fde5eff2a50836f9356e6582123fd92558da5249564015f11a",
+          "edge_weight_blocks/0000.bin": "2317b0068bf0764002b9f4f6a66b8371853cdb7137e9b5e3ff06ec68712204d9",
+          "edge_weight_blocks/0001.bin": "341256bb0bad902e8c8896144e92ec501ecdb6c311c994a6f9fac586c66161ac",
+          "neurons.bin": "cb1bd8c967056afe8e1ae667df9f0d99c59cac365d1660ed61b142caca5c6405",
+          "offsets.bin": "d25b13c53fe98d5efd0aa3abe7a70d693b8fa409f9677b0e84b5d5065a277de7"
+        },
+        "graph_sha256": "5daa6237066c5e16e57e4e6dd14195f8b139ed784d79c7328e1fa02d4a350679",
+        "manifest_sha256": "39c66aa3a9cbe9caf1088107f0e787ad7fb892cea7c53259331fe7f1dd205167",
+        "metadata_sha256": "8a194dd63ee05cae071d4c02692867ba87133c5498d4cc6223de87b467173c71",
+        "model_sha256": "5e2094743fe960f307d4a39647afbd05682e47867f3a4e771a24f9634d01b3c5",
+        "output_map_sha256": "cd6af3b0961c9e096938a9f1802ec32c00d6afb6c9a0125cf72162c64448e5b2",
+        "sensory_map_sha256": "fb5ba4e541b13a34a50973a0760de2b056ed4ac7a2d81425b199c095cdf569b5",
+        "suite_sha256": "ac0c3f68905b1c75d116894dc3da082d252bc408fa5cc5860e15f86aef582639"
+      },
+      "graph": {
+        "dataset": "malecns-v1",
+        "edge_count": 25563197,
+        "neuron_count": 165122,
+        "neurons_sha256": "cb1bd8c967056afe8e1ae667df9f0d99c59cac365d1660ed61b142caca5c6405"
+      },
+      "maps": {
+        "output_sha256": "cd6af3b0961c9e096938a9f1802ec32c00d6afb6c9a0125cf72162c64448e5b2",
+        "sensory_sha256": "fb5ba4e541b13a34a50973a0760de2b056ed4ac7a2d81425b199c095cdf569b5"
+      },
+      "calibration": {
+        "decay": 0.8999999761581421,
+        "dt_ms": 1.0,
+        "max_rate": 20.0,
+        "settle_steps": 16,
+        "threshold": 0.5,
+        "weight_scale": 0.5
+      },
+      "controls": {
+        "brain_bypass": {
+          "inputs": "fixed encoded sensory vector",
+          "learning": false,
+          "outputs": 132,
+          "seed": 4780940720931536897
+        },
+        "output_permutation": {
+          "fixed_square_labels": 0,
+          "neural_activity": "unchanged intact simulator rates",
+          "rng": "splitmix64-v1 + sattolo-v1",
+          "seed": 5784119788524815617,
+          "square_labels": [
+            2,
+            22,
+            5,
+            51,
+            44,
+            39,
+            37,
+            12,
+            14,
+            46,
+            17,
+            13,
+            16,
+            32,
+            59,
+            61,
+            48,
+            33,
+            4,
+            25,
+            55,
+            6,
+            49,
+            45,
+            11,
+            27,
+            54,
+            58,
+            50,
+            53,
+            26,
+            36,
+            62,
+            56,
+            0,
+            18,
+            57,
+            20,
+            60,
+            47,
+            35,
+            63,
+            38,
+            29,
+            10,
+            34,
+            1,
+            15,
+            30,
+            8,
+            21,
+            9,
+            41,
+            7,
+            42,
+            3,
+            24,
+            40,
+            28,
+            52,
+            23,
+            19,
+            43,
+            31
+          ]
+        },
+        "region_ablation": {
+          "annotation_field": "MaleCNS body-annotations superclass",
+          "annotation_value": "descending_neuron",
+          "silenced_neurons": 1314
+        },
+        "shuffled_graph": {
+          "changed_edges": 25498181,
+          "changed_source_neurons": 165046,
+          "compatibility": "exact consensus_nt + compiled sign",
+          "degree_bins": "floor(log2(out_degree))",
+          "destination_fan_in_max_abs_delta": 0,
+          "movable_neurons": 165116,
+          "rng": "splitmix64-v1",
+          "seed": 6001140263786661121,
+          "source_out_degree_distribution_preserved": true,
+          "strata": 92
+        },
+        "weight_reset_delta_edges_removed": 1150563
+      },
+      "checkpoint_delta_edges": 1150563,
+      "suite_source": "generated by tools/teacher/generate-curriculum.mjs (seed=999999, disjoint from training seeds 42/100), real Stockfish 19 labels except mate1 (constructed + chess.js-verified checkmate)",
+      "metadata_source": "MaleCNS v1.0 consensus_nt and traced body annotation superclass; aligned to compiled neurons.bin",
+      "sections": {
+        "capture": {
+          "brain_bypass": {
+            "changed_moves_vs_intact": 30,
+            "top1": 0,
+            "top3": 2
+          },
+          "changed_readouts_vs_intact": {
+            "region_ablation": 23,
+            "shuffled_graph": 23,
+            "weight_reset": 23
+          },
+          "intact": {
+            "changed_moves_vs_intact": 0,
+            "top1": 3,
+            "top3": 6
+          },
+          "output_permutation": {
+            "changed_moves_vs_intact": 23,
+            "top1": 1,
+            "top3": 5
+          },
+          "positions": 30,
+          "region_ablation": {
+            "changed_moves_vs_intact": 23,
+            "top1": 0,
+            "top3": 1
+          },
+          "shuffled_graph": {
+            "changed_moves_vs_intact": 23,
+            "top1": 0,
+            "top3": 4
+          },
+          "weight_reset": {
+            "changed_moves_vs_intact": 6,
+            "top1": 2,
+            "top3": 5
+          }
+        },
+        "check-evasion": {
+          "brain_bypass": {
+            "changed_moves_vs_intact": 21,
+            "top1": 15,
+            "top3": 27
+          },
+          "changed_readouts_vs_intact": {
+            "region_ablation": 25,
+            "shuffled_graph": 25,
+            "weight_reset": 25
+          },
+          "intact": {
+            "changed_moves_vs_intact": 0,
+            "top1": 10,
+            "top3": 24
+          },
+          "output_permutation": {
+            "changed_moves_vs_intact": 14,
+            "top1": 9,
+            "top3": 23
+          },
+          "positions": 30,
+          "region_ablation": {
+            "changed_moves_vs_intact": 13,
+            "top1": 12,
+            "top3": 26
+          },
+          "shuffled_graph": {
+            "changed_moves_vs_intact": 14,
+            "top1": 11,
+            "top3": 24
+          },
+          "weight_reset": {
+            "changed_moves_vs_intact": 0,
+            "top1": 10,
+            "top3": 24
+          }
+        },
+        "endgame": {
+          "brain_bypass": {
+            "changed_moves_vs_intact": 24,
+            "top1": 5,
+            "top3": 11
+          },
+          "changed_readouts_vs_intact": {
+            "region_ablation": 15,
+            "shuffled_graph": 15,
+            "weight_reset": 15
+          },
+          "intact": {
+            "changed_moves_vs_intact": 0,
+            "top1": 3,
+            "top3": 13
+          },
+          "output_permutation": {
+            "changed_moves_vs_intact": 13,
+            "top1": 3,
+            "top3": 9
+          },
+          "positions": 25,
+          "region_ablation": {
+            "changed_moves_vs_intact": 10,
+            "top1": 4,
+            "top3": 12
+          },
+          "shuffled_graph": {
+            "changed_moves_vs_intact": 5,
+            "top1": 8,
+            "top3": 15
+          },
+          "weight_reset": {
+            "changed_moves_vs_intact": 2,
+            "top1": 5,
+            "top3": 15
+          }
+        },
+        "legal": {
+          "brain_bypass": {
+            "changed_moves_vs_intact": 28,
+            "top1": 0,
+            "top3": 3
+          },
+          "changed_readouts_vs_intact": {
+            "region_ablation": 29,
+            "shuffled_graph": 29,
+            "weight_reset": 29
+          },
+          "intact": {
+            "changed_moves_vs_intact": 0,
+            "top1": 4,
+            "top3": 5
+          },
+          "output_permutation": {
+            "changed_moves_vs_intact": 28,
+            "top1": 1,
+            "top3": 2
+          },
+          "positions": 30,
+          "region_ablation": {
+            "changed_moves_vs_intact": 28,
+            "top1": 0,
+            "top3": 1
+          },
+          "shuffled_graph": {
+            "changed_moves_vs_intact": 28,
+            "top1": 2,
+            "top3": 5
+          },
+          "weight_reset": {
+            "changed_moves_vs_intact": 3,
+            "top1": 4,
+            "top3": 4
+          }
+        },
+        "mate1": {
+          "brain_bypass": {
+            "changed_moves_vs_intact": 30,
+            "top1": 4,
+            "top3": 6
+          },
+          "changed_readouts_vs_intact": {
+            "region_ablation": 0,
+            "shuffled_graph": 0,
+            "weight_reset": 0
+          },
+          "intact": {
+            "changed_moves_vs_intact": 0,
+            "top1": 0,
+            "top3": 0
+          },
+          "output_permutation": {
+            "changed_moves_vs_intact": 0,
+            "top1": 0,
+            "top3": 0
+          },
+          "positions": 30,
+          "region_ablation": {
+            "changed_moves_vs_intact": 0,
+            "top1": 0,
+            "top3": 0
+          },
+          "shuffled_graph": {
+            "changed_moves_vs_intact": 0,
+            "top1": 0,
+            "top3": 0
+          },
+          "weight_reset": {
+            "changed_moves_vs_intact": 0,
+            "top1": 0,
+            "top3": 0
+          }
+        },
+        "mixed": {
+          "brain_bypass": {
+            "changed_moves_vs_intact": 30,
+            "top1": 1,
+            "top3": 3
+          },
+          "changed_readouts_vs_intact": {
+            "region_ablation": 24,
+            "shuffled_graph": 24,
+            "weight_reset": 24
+          },
+          "intact": {
+            "changed_moves_vs_intact": 0,
+            "top1": 2,
+            "top3": 3
+          },
+          "output_permutation": {
+            "changed_moves_vs_intact": 24,
+            "top1": 1,
+            "top3": 2
+          },
+          "positions": 30,
+          "region_ablation": {
+            "changed_moves_vs_intact": 24,
+            "top1": 1,
+            "top3": 1
+          },
+          "shuffled_graph": {
+            "changed_moves_vs_intact": 24,
+            "top1": 2,
+            "top3": 3
+          },
+          "weight_reset": {
+            "changed_moves_vs_intact": 3,
+            "top1": 2,
+            "top3": 3
+          }
+        }
+      },
+      "limitations": [
+        "Teacher move agreement is neither Elo nor proof of playing strength.",
+        "A supplied suite may overlap training data; the evaluator does not label it held-out.",
+        "The shuffled graph preserves exact fan-in counts and the global out-degree distribution; individual source degree is matched only within logarithmic bins.",
+        "Population ablation measures only the selected MaleCNS superclass annotation value; it is not anatomical-region ranking.",
+        "The brain bypass is a fixed random sensory readout baseline and is not trained.",
+        "Version-1 checkpoints do not bind edge-block hashes or calibration; this report hashes the actual evaluated files and records calibration separately.",
+        "Trace replay and Elo measurement are separate audit tasks and are not evaluated here."
+      ],
+      "gate": {
+        "positions": 175,
+        "counts": {
+          "intact": {
+            "top1": 22,
+            "top3": 51
+          },
+          "weight_reset": {
+            "top1": 23,
+            "top3": 51
+          },
+          "shuffled_graph": {
+            "top1": 23,
+            "top3": 51
+          },
+          "region_ablation": {
+            "top1": 17,
+            "top3": 41
+          },
+          "output_permutation": {
+            "top1": 15,
+            "top3": 41
+          },
+          "brain_bypass": {
+            "top1": 25,
+            "top3": 52
+          }
+        },
+        "strongest_top1_controls": [
+          "brain_bypass"
+        ],
+        "paired_tests": [
+          {
+            "control": "brain_bypass",
+            "intact_only_correct": 17,
+            "control_only_correct": 20,
+            "both_correct": 5,
+            "both_incorrect": 133,
+            "discordant_total": 37,
+            "p_value": 0.7443121092073852,
+            "p_exact_numerator": 51148738673,
+            "p_exact_denominator": 68719476736,
+            "pass": false
+          }
+        ],
+        "checks": {
+          "intact_top1_exceeds_every_control": false,
+          "intact_top3_not_below_any_control": false,
+          "strongest_control_exact_mcnemar_p_below_0_05": false
+        },
+        "status": "FAIL"
+      }
+    },
+    {
+      "raw_report": "data/reports/standard-validation-2026-09-19/causal-audit-frozen/max-standard-seed43.json",
+      "raw_report_sha256": "2d55da1d7fced172694add4ee16474e08136ab481730698f57deadf77d86e5d5",
+      "model_kind": "max-full",
+      "inputs": {
+        "binary_sha256": "852bf41e3c2cd0a81a1e390f1e5576cca8f3389751fbfc96de3cb91ed272d5b6",
+        "graph_files": {
+          "edge_src_blocks/0000.bin": "1f325756abd3fd9bdfa30e3bbcd4cb0f6b05d0c96e7f022451215cde89b822b1",
+          "edge_src_blocks/0001.bin": "5a4ae0cf3b2ff0fde5eff2a50836f9356e6582123fd92558da5249564015f11a",
+          "edge_weight_blocks/0000.bin": "2317b0068bf0764002b9f4f6a66b8371853cdb7137e9b5e3ff06ec68712204d9",
+          "edge_weight_blocks/0001.bin": "341256bb0bad902e8c8896144e92ec501ecdb6c311c994a6f9fac586c66161ac",
+          "neurons.bin": "cb1bd8c967056afe8e1ae667df9f0d99c59cac365d1660ed61b142caca5c6405",
+          "offsets.bin": "d25b13c53fe98d5efd0aa3abe7a70d693b8fa409f9677b0e84b5d5065a277de7"
+        },
+        "graph_sha256": "5daa6237066c5e16e57e4e6dd14195f8b139ed784d79c7328e1fa02d4a350679",
+        "manifest_sha256": "39c66aa3a9cbe9caf1088107f0e787ad7fb892cea7c53259331fe7f1dd205167",
+        "metadata_sha256": "8a194dd63ee05cae071d4c02692867ba87133c5498d4cc6223de87b467173c71",
+        "model_sha256": "a10de3f743ba9b0a2f590ba2a19fae794c0da615facd54e1b88d1595cd1c0bd3",
+        "output_map_sha256": "cd6af3b0961c9e096938a9f1802ec32c00d6afb6c9a0125cf72162c64448e5b2",
+        "sensory_map_sha256": "fb5ba4e541b13a34a50973a0760de2b056ed4ac7a2d81425b199c095cdf569b5",
+        "suite_sha256": "ac0c3f68905b1c75d116894dc3da082d252bc408fa5cc5860e15f86aef582639"
+      },
+      "graph": {
+        "dataset": "malecns-v1",
+        "edge_count": 25563197,
+        "neuron_count": 165122,
+        "neurons_sha256": "cb1bd8c967056afe8e1ae667df9f0d99c59cac365d1660ed61b142caca5c6405"
+      },
+      "maps": {
+        "output_sha256": "cd6af3b0961c9e096938a9f1802ec32c00d6afb6c9a0125cf72162c64448e5b2",
+        "sensory_sha256": "fb5ba4e541b13a34a50973a0760de2b056ed4ac7a2d81425b199c095cdf569b5"
+      },
+      "calibration": {
+        "decay": 0.8999999761581421,
+        "dt_ms": 1.0,
+        "max_rate": 20.0,
+        "settle_steps": 16,
+        "threshold": 0.5,
+        "weight_scale": 0.5
+      },
+      "controls": {
+        "brain_bypass": {
+          "inputs": "fixed encoded sensory vector",
+          "learning": false,
+          "outputs": 132,
+          "seed": 4780940720931536897
+        },
+        "output_permutation": {
+          "fixed_square_labels": 0,
+          "neural_activity": "unchanged intact simulator rates",
+          "rng": "splitmix64-v1 + sattolo-v1",
+          "seed": 5784119788524815617,
+          "square_labels": [
+            2,
+            22,
+            5,
+            51,
+            44,
+            39,
+            37,
+            12,
+            14,
+            46,
+            17,
+            13,
+            16,
+            32,
+            59,
+            61,
+            48,
+            33,
+            4,
+            25,
+            55,
+            6,
+            49,
+            45,
+            11,
+            27,
+            54,
+            58,
+            50,
+            53,
+            26,
+            36,
+            62,
+            56,
+            0,
+            18,
+            57,
+            20,
+            60,
+            47,
+            35,
+            63,
+            38,
+            29,
+            10,
+            34,
+            1,
+            15,
+            30,
+            8,
+            21,
+            9,
+            41,
+            7,
+            42,
+            3,
+            24,
+            40,
+            28,
+            52,
+            23,
+            19,
+            43,
+            31
+          ]
+        },
+        "region_ablation": {
+          "annotation_field": "MaleCNS body-annotations superclass",
+          "annotation_value": "descending_neuron",
+          "silenced_neurons": 1314
+        },
+        "shuffled_graph": {
+          "changed_edges": 25498181,
+          "changed_source_neurons": 165046,
+          "compatibility": "exact consensus_nt + compiled sign",
+          "degree_bins": "floor(log2(out_degree))",
+          "destination_fan_in_max_abs_delta": 0,
+          "movable_neurons": 165116,
+          "rng": "splitmix64-v1",
+          "seed": 6001140263786661121,
+          "source_out_degree_distribution_preserved": true,
+          "strata": 92
+        },
+        "weight_reset_delta_edges_removed": 8550866
+      },
+      "checkpoint_delta_edges": 8550866,
+      "suite_source": "generated by tools/teacher/generate-curriculum.mjs (seed=999999, disjoint from training seeds 42/100), real Stockfish 19 labels except mate1 (constructed + chess.js-verified checkmate)",
+      "metadata_source": "MaleCNS v1.0 consensus_nt and traced body annotation superclass; aligned to compiled neurons.bin",
+      "sections": {
+        "capture": {
+          "brain_bypass": {
+            "changed_moves_vs_intact": 30,
+            "top1": 0,
+            "top3": 2
+          },
+          "changed_readouts_vs_intact": {
+            "region_ablation": 23,
+            "shuffled_graph": 23,
+            "weight_reset": 23
+          },
+          "intact": {
+            "changed_moves_vs_intact": 0,
+            "top1": 1,
+            "top3": 1
+          },
+          "output_permutation": {
+            "changed_moves_vs_intact": 22,
+            "top1": 0,
+            "top3": 2
+          },
+          "positions": 30,
+          "region_ablation": {
+            "changed_moves_vs_intact": 21,
+            "top1": 0,
+            "top3": 1
+          },
+          "shuffled_graph": {
+            "changed_moves_vs_intact": 23,
+            "top1": 1,
+            "top3": 4
+          },
+          "weight_reset": {
+            "changed_moves_vs_intact": 19,
+            "top1": 2,
+            "top3": 5
+          }
+        },
+        "check-evasion": {
+          "brain_bypass": {
+            "changed_moves_vs_intact": 20,
+            "top1": 15,
+            "top3": 27
+          },
+          "changed_readouts_vs_intact": {
+            "region_ablation": 25,
+            "shuffled_graph": 25,
+            "weight_reset": 25
+          },
+          "intact": {
+            "changed_moves_vs_intact": 0,
+            "top1": 11,
+            "top3": 20
+          },
+          "output_permutation": {
+            "changed_moves_vs_intact": 16,
+            "top1": 12,
+            "top3": 24
+          },
+          "positions": 30,
+          "region_ablation": {
+            "changed_moves_vs_intact": 12,
+            "top1": 12,
+            "top3": 26
+          },
+          "shuffled_graph": {
+            "changed_moves_vs_intact": 13,
+            "top1": 13,
+            "top3": 23
+          },
+          "weight_reset": {
+            "changed_moves_vs_intact": 14,
+            "top1": 10,
+            "top3": 24
+          }
+        },
+        "endgame": {
+          "brain_bypass": {
+            "changed_moves_vs_intact": 23,
+            "top1": 5,
+            "top3": 11
+          },
+          "changed_readouts_vs_intact": {
+            "region_ablation": 15,
+            "shuffled_graph": 15,
+            "weight_reset": 15
+          },
+          "intact": {
+            "changed_moves_vs_intact": 0,
+            "top1": 8,
+            "top3": 16
+          },
+          "output_permutation": {
+            "changed_moves_vs_intact": 9,
+            "top1": 4,
+            "top3": 15
+          },
+          "positions": 25,
+          "region_ablation": {
+            "changed_moves_vs_intact": 12,
+            "top1": 4,
+            "top3": 12
+          },
+          "shuffled_graph": {
+            "changed_moves_vs_intact": 6,
+            "top1": 8,
+            "top3": 16
+          },
+          "weight_reset": {
+            "changed_moves_vs_intact": 12,
+            "top1": 5,
+            "top3": 15
+          }
+        },
+        "legal": {
+          "brain_bypass": {
+            "changed_moves_vs_intact": 26,
+            "top1": 0,
+            "top3": 3
+          },
+          "changed_readouts_vs_intact": {
+            "region_ablation": 29,
+            "shuffled_graph": 29,
+            "weight_reset": 29
+          },
+          "intact": {
+            "changed_moves_vs_intact": 0,
+            "top1": 0,
+            "top3": 3
+          },
+          "output_permutation": {
+            "changed_moves_vs_intact": 27,
+            "top1": 0,
+            "top3": 4
+          },
+          "positions": 30,
+          "region_ablation": {
+            "changed_moves_vs_intact": 27,
+            "top1": 0,
+            "top3": 1
+          },
+          "shuffled_graph": {
+            "changed_moves_vs_intact": 28,
+            "top1": 2,
+            "top3": 5
+          },
+          "weight_reset": {
+            "changed_moves_vs_intact": 27,
+            "top1": 4,
+            "top3": 4
+          }
+        },
+        "mate1": {
+          "brain_bypass": {
+            "changed_moves_vs_intact": 30,
+            "top1": 4,
+            "top3": 6
+          },
+          "changed_readouts_vs_intact": {
+            "region_ablation": 0,
+            "shuffled_graph": 0,
+            "weight_reset": 0
+          },
+          "intact": {
+            "changed_moves_vs_intact": 0,
+            "top1": 0,
+            "top3": 0
+          },
+          "output_permutation": {
+            "changed_moves_vs_intact": 0,
+            "top1": 0,
+            "top3": 0
+          },
+          "positions": 30,
+          "region_ablation": {
+            "changed_moves_vs_intact": 0,
+            "top1": 0,
+            "top3": 0
+          },
+          "shuffled_graph": {
+            "changed_moves_vs_intact": 0,
+            "top1": 0,
+            "top3": 0
+          },
+          "weight_reset": {
+            "changed_moves_vs_intact": 0,
+            "top1": 0,
+            "top3": 0
+          }
+        },
+        "mixed": {
+          "brain_bypass": {
+            "changed_moves_vs_intact": 29,
+            "top1": 1,
+            "top3": 3
+          },
+          "changed_readouts_vs_intact": {
+            "region_ablation": 24,
+            "shuffled_graph": 24,
+            "weight_reset": 24
+          },
+          "intact": {
+            "changed_moves_vs_intact": 0,
+            "top1": 3,
+            "top3": 3
+          },
+          "output_permutation": {
+            "changed_moves_vs_intact": 24,
+            "top1": 2,
+            "top3": 5
+          },
+          "positions": 30,
+          "region_ablation": {
+            "changed_moves_vs_intact": 24,
+            "top1": 1,
+            "top3": 1
+          },
+          "shuffled_graph": {
+            "changed_moves_vs_intact": 23,
+            "top1": 2,
+            "top3": 2
+          },
+          "weight_reset": {
+            "changed_moves_vs_intact": 22,
+            "top1": 2,
+            "top3": 3
+          }
+        }
+      },
+      "limitations": [
+        "Teacher move agreement is neither Elo nor proof of playing strength.",
+        "A supplied suite may overlap training data; the evaluator does not label it held-out.",
+        "The shuffled graph preserves exact fan-in counts and the global out-degree distribution; individual source degree is matched only within logarithmic bins.",
+        "Population ablation measures only the selected MaleCNS superclass annotation value; it is not anatomical-region ranking.",
+        "The brain bypass is a fixed random sensory readout baseline and is not trained.",
+        "Version-1 checkpoints do not bind edge-block hashes or calibration; this report hashes the actual evaluated files and records calibration separately.",
+        "Trace replay and Elo measurement are separate audit tasks and are not evaluated here."
+      ],
+      "gate": {
+        "positions": 175,
+        "counts": {
+          "intact": {
+            "top1": 23,
+            "top3": 43
+          },
+          "weight_reset": {
+            "top1": 23,
+            "top3": 51
+          },
+          "shuffled_graph": {
+            "top1": 26,
+            "top3": 50
+          },
+          "region_ablation": {
+            "top1": 17,
+            "top3": 41
+          },
+          "output_permutation": {
+            "top1": 18,
+            "top3": 50
+          },
+          "brain_bypass": {
+            "top1": 25,
+            "top3": 52
+          }
+        },
+        "strongest_top1_controls": [
+          "shuffled_graph"
+        ],
+        "paired_tests": [
+          {
+            "control": "shuffled_graph",
+            "intact_only_correct": 7,
+            "control_only_correct": 10,
+            "both_correct": 16,
+            "both_incorrect": 142,
+            "discordant_total": 17,
+            "p_value": 0.8338470458984375,
+            "p_exact_numerator": 54647,
+            "p_exact_denominator": 65536,
+            "pass": false
+          }
+        ],
+        "checks": {
+          "intact_top1_exceeds_every_control": false,
+          "intact_top3_not_below_any_control": false,
+          "strongest_control_exact_mcnemar_p_below_0_05": false
+        },
+        "status": "FAIL"
+      }
+    }
+  ],
+  "status": "FAIL"
+}
