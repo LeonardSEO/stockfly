@@ -88,7 +88,7 @@ Cache-Control for model blobs: public, max-age=31536000, immutable
 
 - [ ] **Step 2: Implement static server with localhost-only bind by default**
 
-Default `127.0.0.1:8765`; `--bind` override is explicit.
+Default bind `127.0.0.1:5187`; the browser opens `http://localhost:5187/#play`, and `--bind` remains an explicit override.
 
 - [ ] **Step 3: Add `/health` and `/models` endpoints**
 

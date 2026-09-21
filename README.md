@@ -37,7 +37,7 @@ The corrected native CPU and Apple M4 Metal implementations pass **24/24 fixed m
 
 The package contains a native server, built web/WASM files, Stockfish, licenses and corresponding source archives. A normal local build also includes the selected graph, soma metadata and Bio/Max model catalog; it requires no Node, Python, Rust or training to **run**. Download-first CI bundles omit model artifacts and need a separately published experimental model release before they can play.
 
-Extract `stockfly-macos-arm64.zip` or `stockfly-windows-x64.zip`, enter its `stockfly` folder, and launch `Start StockFly.command` on macOS or `Start StockFly.cmd` on Windows. The launcher prints and opens `http://127.0.0.1:8765`. These local bundles are unsigned. The v0.3.2 Windows download-first runtime/browser smoke passed on [workflow 35448048230 from commit 858a253](https://github.com/LeonardSEO/stockfly/actions/runs/35448048230); Windows model inference and macOS notarization remain unverified.
+Extract `stockfly-macos-arm64.zip` or `stockfly-windows-x64.zip`, enter its `stockfly` folder, and launch `Start StockFly.command` on macOS or `Start StockFly.cmd` on Windows. The launcher prints and opens `http://localhost:5187/#play`. These local bundles are unsigned. The v0.3.2 Windows download-first runtime/browser smoke passed on [workflow 35448048230 from commit 858a253](https://github.com/LeonardSEO/stockfly/actions/runs/35448048230); Windows model inference and macOS notarization remain unverified.
 
 When models are absent, the UI shows an executable download instruction. Run the bundled `Download models.command` / `Download models.cmd`, or use the native CLI:
 

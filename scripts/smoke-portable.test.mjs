@@ -112,12 +112,12 @@ test('route check records stable machine-readable response evidence', async () =
 test('only exact expected no-model network logs are classified as no-model evidence', () => {
   assert.equal(isExpectedNoModelLog({
     source: 'network', level: 'error', text: 'Failed to load resource: 404',
-    url: 'http://127.0.0.1:8765/vendor/models/catalog.json',
-  }, new Set(), 'http://127.0.0.1:8765'), true);
+    url: 'http://127.0.0.1:5187/vendor/models/catalog.json',
+  }, new Set(), 'http://127.0.0.1:5187'), true);
   assert.equal(isExpectedNoModelLog({
     source: 'network', level: 'error', text: 'Failed to load resource: 404',
-    url: 'http://127.0.0.1:8765/missing.js',
-  }, new Set(), 'http://127.0.0.1:8765'), false);
+    url: 'http://127.0.0.1:5187/missing.js',
+  }, new Set(), 'http://127.0.0.1:5187'), false);
   assert.equal(isExpectedNoModelLog({
     source: 'network', level: 'error', text: 'Failed to load resource: 404', networkRequestId: 'catalog-request',
   }, new Set(['catalog-request'])), true);
@@ -129,13 +129,13 @@ test('normal no-model browser fixture allows only its exact same-origin 404 rout
   const fixture = JSON.parse(await readFile(path.join(repository, 'tests/fixtures/portable-no-model-browser.json'), 'utf8'));
   assert.deepEqual([...EXPECTED_NO_MODEL_ROUTES].sort(), [...fixture.expectedMissingRoutes].sort());
   for (const route of fixture.expectedMissingRoutes) {
-    assert.equal(isExpectedNoModelHttpError({ status: 404, url: `http://127.0.0.1:8765${route}` }, 'http://127.0.0.1:8765'), true);
+    assert.equal(isExpectedNoModelHttpError({ status: 404, url: `http://127.0.0.1:5187${route}` }, 'http://127.0.0.1:5187'), true);
   }
   for (const route of fixture.unexpectedMissingRoutes) {
-    assert.equal(isExpectedNoModelHttpError({ status: 404, url: `http://127.0.0.1:8765${route}` }, 'http://127.0.0.1:8765'), false);
+    assert.equal(isExpectedNoModelHttpError({ status: 404, url: `http://127.0.0.1:5187${route}` }, 'http://127.0.0.1:5187'), false);
   }
-  assert.equal(isExpectedNoModelHttpError({ status: 500, url: 'http://127.0.0.1:8765/vendor/graph/manifest.json' }, 'http://127.0.0.1:8765'), false);
-  assert.equal(isExpectedNoModelHttpError({ status: 404, url: 'http://example.test/vendor/graph/manifest.json' }, 'http://127.0.0.1:8765'), false);
+  assert.equal(isExpectedNoModelHttpError({ status: 500, url: 'http://127.0.0.1:5187/vendor/graph/manifest.json' }, 'http://127.0.0.1:5187'), false);
+  assert.equal(isExpectedNoModelHttpError({ status: 404, url: 'http://example.test/vendor/graph/manifest.json' }, 'http://127.0.0.1:5187'), false);
 
   const packager = await readFile(path.join(repository, 'scripts/package-local.py'), 'utf8');
   assert.match(packager, /copy2\(ROOT \/ 'apps\/web\/public\/favicon\.svg', app \/ 'public\/favicon\.svg'\)/);
